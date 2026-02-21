@@ -392,8 +392,21 @@
       points.forEach(r => {
         const card = document.createElement('div');
         card.className = 'result-card';
+
+        // Build Obsidian URL
+        const filename = r.payload?.filename ?? r.payload?.title ?? 'Untitled';
+        const filePath = r.payload?.path ?? filename;
+        // Use full path for Obsidian URL, remove .md extension if present and encode for URL
+        const fileForUrl = filePath.replace(/\.md$/, '');
+        // Format: obsidian://open?vault=secondbrain&file=secondbrain/path/to/file
+        const obsidianUrl = `obsidian://open?vault=secondbrain&file=${encodeURIComponent('secondbrain/' + fileForUrl)}`;
+
         card.innerHTML = `
-          <div class="title">${escapeHtml(r.payload?.filename ?? r.payload?.title ?? 'Untitled')}</div>
+          <div class="title">
+            <a href="${obsidianUrl}" style="color: var(--accent); text-decoration: none;">
+              ${escapeHtml(filename)}
+            </a>
+          </div>
           ${r.payload?.path ? `<div class="path">${escapeHtml(r.payload.path)}</div>` : ''}
           <span class="score">Score: ${r.score.toFixed(4)}</span>`;
         resultsDiv.appendChild(card);
