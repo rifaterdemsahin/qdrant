@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Search — Qdrant Second Brain</title>
+
+  <!-- Transformers.js for client-side embedding -->
+  <script src="https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --green: #3fb950;
+      --yellow: #d29922;
+      --red: #f85149;
+      --purple: #bc8cff;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      padding: 0;
+    }
+
+    /* ── Navigation ── */
+    nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    nav .brand {
+      font-weight: 700;
+      color: var(--accent);
+      font-size: 1.1rem;
+      text-decoration: none;
+    }
+    nav a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      padding: 4px 10px;
+      border-radius: 6px;
+      transition: background 0.2s, color 0.2s;
+    }
+    nav a:hover, nav a.active {
+      background: var(--bg);
+      color: var(--accent);
+    }
+
+    .container { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; }
+
+    header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    header h1 { font-size: 2rem; color: var(--accent); }
+    header p  { color: var(--muted); margin-top: 0.5rem; }
+
+    /* ── Search UI ── */
+    .search-box {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    .search-box input {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 12px 16px;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-box input:focus { border-color: var(--accent); }
+    .search-box button {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .search-box button:hover { opacity: 0.85; }
+    .search-box button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Quick-pick chips */
+    .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; }
+    .chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .chip:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Status bar */
+    .status-bar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 16px;
+      margin-bottom: 1.5rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--red);
+      flex-shrink: 0;
+    }
+    .status-dot.ok   { background: var(--green); }
+    .status-dot.load { background: var(--yellow); }
+
+    /* Settings */
+    .settings {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 1.5rem;
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      align-items: center;
+      font-size: 0.85rem;
+    }
+    .settings label { color: var(--muted); }
+    .settings select, .settings input[type="number"] {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      padding: 4px 8px;
+      font-size: 0.85rem;
+    }
+
+    /* Results */
+    #results { min-height: 200px; }
+    .result-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 0.75rem;
+      transition: border-color 0.2s;
+    }
+    .result-card:hover { border-color: var(--accent); }
+    .result-card .title {
+      font-weight: 600;
+      color: var(--accent);
+      font-size: 0.95rem;
+    }
+    .result-card .path {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 2px;
+      word-break: break-all;
+    }
+    .result-card .score {
+      display: inline-block;
+      margin-top: 6px;
+      background: var(--bg);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 0.75rem;
+      color: var(--green);
+    }
+    .result-card .snippet {
+      margin-top: 8px;
+      font-size: 0.85rem;
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--muted);
+    }
+    .empty-state .icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding-top: 1rem;
+      margin-top: 2rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav>
+    <a href="index.html" class="brand">Qdrant</a>
+    <a href="index.html">Home</a>
+    <a href="search.html" class="active">Search</a>
+    <a href="dashboard.html">Dashboard</a>
+  </nav>
+
+  <div class="container">
+
+    <header>
+      <h1>Semantic Search</h1>
+      <p>Search your second brain using vector similarity powered by Qdrant at <code>192.168.2.227:6333</code></p>
+    </header>
+
+    <!-- Status -->
+    <div class="status-bar">
+      <span class="status-dot" id="qdrant-dot"></span>
+      <span id="qdrant-status">Checking Qdrant connection&hellip;</span>
+      <span style="margin-left:auto;" id="model-status">Loading embedding model&hellip;</span>
+    </div>
+
+    <!-- Settings -->
+    <div class="settings">
+      <div>
+        <label for="collection-select">Collection:</label>
+        <select id="collection-select">
+          <option value="mac_repo_index">mac_repo_index</option>
+        </select>
+      </div>
+      <div>
+        <label for="limit-input">Results:</label>
+        <input type="number" id="limit-input" value="10" min="1" max="100" style="width:60px" />
+      </div>
+    </div>
+
+    <!-- Search Input -->
+    <div class="search-box">
+      <input type="text" id="search-query" placeholder="Ask anything about your notes&hellip;" autofocus
+             onkeydown="if(event.key==='Enter') performSearch()" />
+      <button id="search-btn" onclick="performSearch()" disabled>Search</button>
+    </div>
+
+    <!-- Quick Picks -->
+    <div class="chips">
+      <span class="chip" onclick="setQuery('How to set up Qdrant on Proxmox')">Qdrant setup</span>
+      <span class="chip" onclick="setQuery('Docker container configuration')">Docker config</span>
+      <span class="chip" onclick="setQuery('Semantic search best practices')">Search tips</span>
+      <span class="chip" onclick="setQuery('Python embedding pipeline')">Embeddings</span>
+      <span class="chip" onclick="setQuery('Troubleshooting connection errors')">Debugging</span>
+    </div>
+
+    <!-- Results -->
+    <div id="results">
+      <div class="empty-state">
+        <div class="icon">&#128269;</div>
+        <p>Type a query above to search your second brain</p>
+      </div>
+    </div>
+
+    <footer>
+      Qdrant &mdash; Second Brain Semantic Search &bull; MIT License &bull;
+      <a href="https://qdrant.tech/documentation/" style="color:var(--accent)">Qdrant Docs</a>
+    </footer>
+
+  </div>
+
+<script>
+const QDRANT_URL = 'http://192.168.2.227:6333';
+let extractor = null;
+
+// ── Init embedding model ──
+async function initExtractor() {
+  try {
+    document.getElementById('model-status').innerHTML = '<span class="spinner"></span> Loading model&hellip;';
+    extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+    document.getElementById('model-status').textContent = 'Model ready';
+    document.getElementById('search-btn').disabled = false;
+  } catch (e) {
+    document.getElementById('model-status').textContent = 'Model failed to load';
+    console.error(e);
+  }
+}
+
+// ── Check Qdrant health ──
+async function checkQdrant() {
+  const dot = document.getElementById('qdrant-dot');
+  const txt = document.getElementById('qdrant-status');
+  try {
+    const r = await fetch(QDRANT_URL + '/healthz', { signal: AbortSignal.timeout(3000) });
+    if (r.ok) {
+      dot.className = 'status-dot ok';
+      txt.textContent = 'Qdrant connected';
+      // Populate collections dropdown
+      const cols = await fetch(QDRANT_URL + '/collections').then(r => r.json());
+      const sel = document.getElementById('collection-select');
+      sel.innerHTML = '';
+      (cols.result?.collections || []).forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.name;
+        opt.textContent = c.name;
+        sel.appendChild(opt);
+      });
+    } else {
+      dot.className = 'status-dot';
+      txt.textContent = 'Qdrant returned ' + r.status;
+    }
+  } catch {
+    dot.className = 'status-dot';
+    txt.textContent = 'Qdrant unreachable';
+  }
+}
+
+// ── Quick-pick ──
+function setQuery(term) {
+  document.getElementById('search-query').value = term;
+  document.getElementById('search-query').focus();
+}
+
+// ── Search ──
+async function performSearch() {
+  const query = document.getElementById('search-query').value.trim();
+  if (!query || !extractor) return;
+
+  const collection = document.getElementById('collection-select').value;
+  const limit = parseInt(document.getElementById('limit-input').value) || 10;
+  const resultsDiv = document.getElementById('results');
+
+  resultsDiv.innerHTML = '<div class="empty-state"><span class="spinner" style="width:24px;height:24px;border-width:3px;"></span><p style="margin-top:12px">Searching&hellip;</p></div>';
+
+  try {
+    // Generate embedding
+    const output = await extractor(query, { pooling: 'mean', normalize: true });
+    const vector = Array.from(output.data);
+
+    // Query Qdrant
+    const response = await fetch(`${QDRANT_URL}/collections/${collection}/points/search`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vector, limit, with_payload: true })
+    });
+
+    const data = await response.json();
+    displayResults(data.result || []);
+  } catch (error) {
+    resultsDiv.innerHTML = `<div class="empty-state"><div class="icon">&#9888;&#65039;</div><p>Error: ${error.message}</p></div>`;
+  }
+}
+
+function displayResults(results) {
+  const resultsDiv = document.getElementById('results');
+
+  if (!results.length) {
+    resultsDiv.innerHTML = '<div class="empty-state"><div class="icon">&#128528;</div><p>No results found</p></div>';
+    return;
+  }
+
+  resultsDiv.innerHTML = `<p style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem;">${results.length} results</p>`;
+
+  results.forEach(r => {
+    const card = document.createElement('div');
+    card.className = 'result-card';
+
+    const filename = r.payload?.filename || r.payload?.title || r.payload?.path || 'Untitled';
+    const path = r.payload?.path || '';
+    const snippet = r.payload?.text || r.payload?.content || '';
+    const truncSnippet = snippet.length > 300 ? snippet.substring(0, 300) + '&hellip;' : snippet;
+
+    card.innerHTML = `
+      <div class="title">${escapeHtml(filename)}</div>
+      ${path ? `<div class="path">${escapeHtml(path)}</div>` : ''}
+      <span class="score">Score: ${r.score.toFixed(4)}</span>
+      ${truncSnippet ? `<div class="snippet">${escapeHtml(truncSnippet)}</div>` : ''}
+    `;
+    resultsDiv.appendChild(card);
+  });
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ── Boot ──
+checkQdrant();
+initExtractor();
+</script>
+</body>
+</html>

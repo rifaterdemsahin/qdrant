@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Qdrant Second Brain</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --green: #3fb950;
+      --yellow: #d29922;
+      --red: #f85149;
+      --purple: #bc8cff;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      padding: 0;
+    }
+
+    /* ── Navigation ── */
+    nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    nav .brand {
+      font-weight: 700;
+      color: var(--accent);
+      font-size: 1.1rem;
+      text-decoration: none;
+    }
+    nav a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      padding: 4px 10px;
+      border-radius: 6px;
+      transition: background 0.2s, color 0.2s;
+    }
+    nav a:hover, nav a.active {
+      background: var(--bg);
+      color: var(--accent);
+    }
+
+    .container { max-width: 960px; margin: 0 auto; padding: 2rem 1rem; }
+
+    header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    header h1 { font-size: 2rem; color: var(--accent); }
+    header p  { color: var(--muted); margin-top: 0.5rem; }
+
+    /* ── Stat Cards ── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      text-align: center;
+    }
+    .stat-card .value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .stat-card .label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .stat-card.ok .value   { color: var(--green); }
+    .stat-card.warn .value { color: var(--yellow); }
+    .stat-card.err .value  { color: var(--red); }
+
+    /* Section */
+    section { margin-bottom: 2.5rem; }
+    section h2 {
+      font-size: 1.25rem;
+      color: var(--text);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    th {
+      background: var(--surface);
+      color: var(--muted);
+      text-align: left;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      font-weight: 600;
+    }
+    td {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    tr:hover td { background: var(--surface); }
+
+    .badge-ok   { color: var(--green); }
+    .badge-warn { color: var(--yellow); }
+    .badge-err  { color: var(--red); }
+
+    /* Telemetry block */
+    .telemetry-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      overflow-x: auto;
+      font-size: 0.8rem;
+      color: var(--muted);
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .refresh-btn {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 18px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: 1.5rem;
+    }
+    .refresh-btn:hover { opacity: 0.85; }
+
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding-top: 1rem;
+      margin-top: 2rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav>
+    <a href="index.html" class="brand">Qdrant</a>
+    <a href="index.html">Home</a>
+    <a href="search.html">Search</a>
+    <a href="dashboard.html" class="active">Dashboard</a>
+  </nav>
+
+  <div class="container">
+
+    <header>
+      <h1>Dashboard</h1>
+      <p>Live statistics and health for Qdrant at <code>192.168.2.227:6333</code></p>
+    </header>
+
+    <button class="refresh-btn" onclick="loadAll()">&#8635; Refresh</button>
+
+    <!-- Stat Cards -->
+    <div class="stat-grid">
+      <div class="stat-card" id="card-health">
+        <div class="value" id="val-health">&mdash;</div>
+        <div class="label">Health Status</div>
+      </div>
+      <div class="stat-card" id="card-collections">
+        <div class="value" id="val-collections">&mdash;</div>
+        <div class="label">Collections</div>
+      </div>
+      <div class="stat-card" id="card-points">
+        <div class="value" id="val-points">&mdash;</div>
+        <div class="label">Total Points</div>
+      </div>
+      <div class="stat-card" id="card-version">
+        <div class="value" id="val-version">&mdash;</div>
+        <div class="label">Qdrant Version</div>
+      </div>
+    </div>
+
+    <!-- Collections Table -->
+    <section>
+      <h2>Collections</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Points</th>
+            <th>Vectors Size</th>
+            <th>Segments</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="collections-body">
+          <tr><td colspan="5" style="color:var(--muted);text-align:center;">Loading&hellip;</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Cluster Info -->
+    <section>
+      <h2>Cluster Info</h2>
+      <div class="telemetry-block" id="cluster-info">Loading&hellip;</div>
+    </section>
+
+    <!-- Telemetry -->
+    <section>
+      <h2>Telemetry (raw)</h2>
+      <div class="telemetry-block" id="telemetry-raw">Loading&hellip;</div>
+    </section>
+
+    <footer>
+      Qdrant &mdash; Second Brain Semantic Search &bull; MIT License &bull;
+      <a href="https://qdrant.tech/documentation/" style="color:var(--accent)">Qdrant Docs</a>
+    </footer>
+
+  </div>
+
+<script>
+const QDRANT_URL = 'http://192.168.2.227:6333';
+
+async function fetchJSON(path) {
+  const r = await fetch(QDRANT_URL + path, { signal: AbortSignal.timeout(5000) });
+  return r.json();
+}
+
+async function loadHealth() {
+  const card = document.getElementById('card-health');
+  const val  = document.getElementById('val-health');
+  try {
+    const r = await fetch(QDRANT_URL + '/healthz', { signal: AbortSignal.timeout(3000) });
+    if (r.ok) {
+      val.textContent = 'OK';
+      card.className = 'stat-card ok';
+    } else {
+      val.textContent = r.status;
+      card.className = 'stat-card warn';
+    }
+  } catch {
+    val.textContent = 'DOWN';
+    card.className = 'stat-card err';
+  }
+}
+
+async function loadVersion() {
+  try {
+    const data = await fetchJSON('/');
+    document.getElementById('val-version').textContent = data.version || '?';
+  } catch {
+    document.getElementById('val-version').textContent = '?';
+  }
+}
+
+async function loadCollections() {
+  const tbody = document.getElementById('collections-body');
+  const valCols = document.getElementById('val-collections');
+  const valPts  = document.getElementById('val-points');
+
+  try {
+    const data = await fetchJSON('/collections');
+    const cols = data.result?.collections || [];
+    valCols.textContent = cols.length;
+
+    if (!cols.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted);text-align:center;">No collections</td></tr>';
+      valPts.textContent = '0';
+      return;
+    }
+
+    let totalPoints = 0;
+    let rows = '';
+
+    for (const col of cols) {
+      try {
+        const info = await fetchJSON(`/collections/${col.name}`);
+        const r = info.result || {};
+        const pts     = r.points_count || r.vectors_count || 0;
+        const vecSize = r.config?.params?.vectors?.size || r.config?.params?.vectors?.default?.size || '?';
+        const segs    = r.segments_count || '?';
+        const status  = r.status || '?';
+        totalPoints += pts;
+
+        const statusClass = status === 'green' ? 'badge-ok' : status === 'yellow' ? 'badge-warn' : 'badge-err';
+
+        rows += `<tr>
+          <td><strong>${col.name}</strong></td>
+          <td>${pts.toLocaleString()}</td>
+          <td>${vecSize}</td>
+          <td>${segs}</td>
+          <td class="${statusClass}">${status}</td>
+        </tr>`;
+      } catch {
+        rows += `<tr><td>${col.name}</td><td colspan="4" class="badge-err">Error loading</td></tr>`;
+      }
+    }
+
+    tbody.innerHTML = rows;
+    valPts.textContent = totalPoints.toLocaleString();
+  } catch {
+    tbody.innerHTML = '<tr><td colspan="5" class="badge-err">Failed to load collections</td></tr>';
+    valCols.textContent = '?';
+    valPts.textContent = '?';
+  }
+}
+
+async function loadCluster() {
+  const el = document.getElementById('cluster-info');
+  try {
+    const data = await fetchJSON('/cluster');
+    el.textContent = JSON.stringify(data, null, 2);
+  } catch (e) {
+    el.textContent = 'Error: ' + e.message;
+  }
+}
+
+async function loadTelemetry() {
+  const el = document.getElementById('telemetry-raw');
+  try {
+    const data = await fetchJSON('/telemetry');
+    el.textContent = JSON.stringify(data, null, 2);
+  } catch (e) {
+    el.textContent = 'Error: ' + e.message;
+  }
+}
+
+function loadAll() {
+  loadHealth();
+  loadVersion();
+  loadCollections();
+  loadCluster();
+  loadTelemetry();
+}
+
+loadAll();
+</script>
+</body>
+</html>
