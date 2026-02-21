@@ -1,7 +1,9 @@
 # Qdrant — Second Brain Semantic Search on Proxmox
 
 > Vector DB setup on Proxmox for semantic search across a personal second brain (25GB of markdown + images).
+
 > http://192.168.2.227:6333/dashboard#/welcome
+
 > http://127.0.0.1:5500/5_Symbols/search.html
 ---
 
