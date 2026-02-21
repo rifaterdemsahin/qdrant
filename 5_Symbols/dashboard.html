@@ -215,6 +215,14 @@
         <div class="value" id="val-version">&mdash;</div>
         <div class="label">Qdrant Version</div>
       </div>
+      <div class="stat-card" id="card-dbsize">
+        <div class="value" id="val-dbsize">&mdash;</div>
+        <div class="label">DB Size on Disk</div>
+      </div>
+      <div class="stat-card" id="card-memory">
+        <div class="value" id="val-memory">&mdash;</div>
+        <div class="label">Memory Usage</div>
+      </div>
     </div>
 
     <!-- Collections Table -->
@@ -362,12 +370,96 @@ async function loadTelemetry() {
   }
 }
 
+async function loadStorageSize() {
+  const valDb  = document.getElementById('val-dbsize');
+  const valMem = document.getElementById('val-memory');
+  const cardDb = document.getElementById('card-dbsize');
+  const cardMem = document.getElementById('card-memory');
+
+  try {
+    // Get per-collection storage info
+    const colData = await fetchJSON('/collections');
+    const cols = colData.result?.collections || [];
+
+    let totalDiskBytes = 0;
+    let totalRamBytes  = 0;
+
+    for (const col of cols) {
+      try {
+        const info = await fetchJSON(`/collections/${col.name}`);
+        const r = info.result || {};
+
+        // Qdrant exposes optimizer_status and detailed segment info
+        // Use points_count * vector_size * 4 bytes as vector storage estimate
+        const pts     = r.points_count || 0;
+        const vecSize = r.config?.params?.vectors?.size || r.config?.params?.vectors?.default?.size || 384;
+        const vectorBytes = pts * vecSize * 4; // float32 = 4 bytes per dimension
+
+        // Payload index + WAL overhead ~30% of vector data
+        const estimatedDisk = vectorBytes * 1.3;
+        totalDiskBytes += estimatedDisk;
+
+        // RAM: vectors in memory + HNSW index (~1.1x vector size)
+        const onDisk = r.config?.params?.vectors?.on_disk || r.config?.params?.vectors?.default?.on_disk || false;
+        if (onDisk) {
+          // memmap mode — only HNSW graph in RAM (~10% of vectors)
+          totalRamBytes += vectorBytes * 0.1;
+        } else {
+          // vectors in RAM + HNSW overhead
+          totalRamBytes += vectorBytes * 1.1;
+        }
+      } catch { /* skip */ }
+    }
+
+    // Also try telemetry for actual disk usage
+    try {
+      const telem = await fetchJSON('/telemetry');
+      const appInfo = telem.result?.app || {};
+      // Some Qdrant versions expose disk usage in telemetry
+      if (appInfo.disk_usage_bytes) {
+        totalDiskBytes = appInfo.disk_usage_bytes;
+      }
+      if (appInfo.ram_usage_bytes) {
+        totalRamBytes = appInfo.ram_usage_bytes;
+      }
+
+      // Check collections telemetry for more accurate sizes
+      const colsTelem = telem.result?.collections || {};
+      if (colsTelem.total_disk_usage_bytes) {
+        totalDiskBytes = colsTelem.total_disk_usage_bytes;
+      }
+      if (colsTelem.total_ram_usage_bytes) {
+        totalRamBytes = colsTelem.total_ram_usage_bytes;
+      }
+    } catch { /* use estimates */ }
+
+    valDb.textContent  = formatBytes(totalDiskBytes);
+    valMem.textContent = formatBytes(totalRamBytes);
+    cardDb.className  = 'stat-card';
+    cardMem.className = 'stat-card';
+  } catch (e) {
+    valDb.textContent  = '?';
+    valMem.textContent = '?';
+  }
+}
+
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 B';
+  const gb = bytes / (1024 * 1024 * 1024);
+  if (gb >= 1)   return gb.toFixed(2) + ' GB';
+  const mb = bytes / (1024 * 1024);
+  if (mb >= 1)   return mb.toFixed(1) + ' MB';
+  const kb = bytes / 1024;
+  return kb.toFixed(0) + ' KB';
+}
+
 function loadAll() {
   loadHealth();
   loadVersion();
   loadCollections();
   loadCluster();
   loadTelemetry();
+  loadStorageSize();
 }
 
 loadAll();
