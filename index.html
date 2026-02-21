@@ -445,8 +445,29 @@ for r in resp.points:
   <!-- 6 Semblance -->
   <section id="semblance">
     <h2>6_Semblance — Error Logs and Solutions</h2>
+    <p>Full details: <a href="6_Semblance/errors.md" style="color:var(--accent)">6_Semblance/errors.md</a></p>
     <table>
       <tr><th>Error</th><th>Cause</th><th>Solution</th></tr>
+      <tr>
+        <td><code>pipeline is not defined</code> / Model failed to load</td>
+        <td><code>&lt;script src&gt;</code> does not expose ES module exports as globals</td>
+        <td>Use <code>&lt;script type="module"&gt; import { pipeline } from '…'</code></td>
+      </tr>
+      <tr>
+        <td><code>client.search() AttributeError</code></td>
+        <td>qdrant-client 1.17 removed search()</td>
+        <td>Use <code>client.query_points(query=vec)</code> instead</td>
+      </tr>
+      <tr>
+        <td><code>/points/search</code> 404 or wrong format</td>
+        <td>Qdrant ≥1.10 deprecated /points/search</td>
+        <td>Use <code>/points/query</code> — response is in <code>result.points</code></td>
+      </tr>
+      <tr>
+        <td>Mixed content blocked</td>
+        <td>HTTPS page → HTTP Qdrant request</td>
+        <td>Open via <code>http://localhost</code> or put Qdrant behind HTTPS</td>
+      </tr>
       <tr>
         <td><code>OOM killed</code></td>
         <td>Vectors loaded into RAM exceed limit</td>
@@ -461,16 +482,6 @@ for r in resp.points:
         <td>Slow indexing on ZFS</td>
         <td>ZFS write amplification</td>
         <td>Use <code>recordsize=16k</code>, disable atime</td>
-      </tr>
-      <tr>
-        <td><code>client.search() AttributeError</code></td>
-        <td>qdrant-client 1.17 removed search()</td>
-        <td>Use <code>client.query_points(query=vec)</code> instead</td>
-      </tr>
-      <tr>
-        <td>Mixed content blocked</td>
-        <td>https page → http Qdrant request</td>
-        <td>Open page via <code>file://</code> locally, or put Qdrant behind HTTPS</td>
       </tr>
     </table>
   </section>
