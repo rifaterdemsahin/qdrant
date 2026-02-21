@@ -8,9 +8,6 @@
   <!-- PrismJS theme -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" />
 
-   <!-- Transformers.js -->
-   <script src="https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1"></script>
-
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -37,12 +34,34 @@
 
     .container { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; }
 
+    /* Nav */
+    nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    nav .brand { font-weight: 700; color: var(--accent); font-size: 1.1rem; text-decoration: none; }
+    nav a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      padding: 4px 10px;
+      border-radius: 6px;
+      transition: background 0.2s, color 0.2s;
+    }
+    nav a:hover, nav a.active { background: var(--bg); color: var(--accent); }
+
     header {
       border-bottom: 1px solid var(--border);
       padding-bottom: 1.5rem;
       margin-bottom: 2rem;
     }
-
     header h1 { font-size: 2rem; color: var(--accent); }
     header p  { color: var(--muted); margin-top: 0.5rem; }
 
@@ -65,7 +84,6 @@
       gap: 1rem;
       margin-bottom: 2.5rem;
     }
-
     .folder-card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -74,23 +92,12 @@
       transition: border-color 0.2s;
     }
     .folder-card:hover { border-color: var(--accent); }
-
-    .folder-card .num {
-      font-size: 0.7rem;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-    .folder-card h3 {
-      font-size: 1rem;
-      color: var(--accent);
-      margin: 4px 0 6px;
-    }
+    .folder-card .num { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+    .folder-card h3 { font-size: 1rem; color: var(--accent); margin: 4px 0 6px; }
     .folder-card p { font-size: 0.85rem; color: var(--muted); }
 
     /* Sections */
-    section { margin-bottom: 2.5rem; }
-
+    section { margin-bottom: 2.5rem; scroll-margin-top: 60px; }
     section h2 {
       font-size: 1.25rem;
       color: var(--text);
@@ -98,29 +105,12 @@
       padding-bottom: 0.5rem;
       margin-bottom: 1rem;
     }
-
     section p { color: var(--muted); margin-bottom: 0.75rem; font-size: 0.9rem; }
 
     /* Tables */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.875rem;
-      margin-bottom: 1rem;
-    }
-    th {
-      background: var(--surface);
-      color: var(--muted);
-      text-align: left;
-      padding: 8px 12px;
-      border: 1px solid var(--border);
-      font-weight: 600;
-    }
-    td {
-      padding: 8px 12px;
-      border: 1px solid var(--border);
-      color: var(--text);
-    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; margin-bottom: 1rem; }
+    th { background: var(--surface); color: var(--muted); text-align: left; padding: 8px 12px; border: 1px solid var(--border); font-weight: 600; }
+    td { padding: 8px 12px; border: 1px solid var(--border); color: var(--text); }
     tr:hover td { background: var(--surface); }
 
     /* Cost tracker */
@@ -159,33 +149,110 @@
     .cost-tracker button:hover { opacity: 0.85; }
     #cost-output { font-size: 0.85rem; color: var(--green); align-self: flex-end; }
 
-    /* ── Navigation ── */
-    nav {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 0.75rem 1.5rem;
+    /* Search box */
+    .search-box {
       display: flex;
-      align-items: center;
-      gap: 1.5rem;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
     }
-    nav .brand {
-      font-weight: 700;
-      color: var(--accent);
-      font-size: 1.1rem;
-      text-decoration: none;
-    }
-    nav a {
-      color: var(--muted);
-      text-decoration: none;
-      font-size: 0.9rem;
-      padding: 4px 10px;
+    .search-box input {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
       border-radius: 6px;
-      transition: background 0.2s, color 0.2s;
+      color: var(--text);
+      padding: 8px 12px;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
     }
-    nav a:hover, nav a.active {
+    .search-box input:focus { border-color: var(--accent); }
+    .search-box button {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 18px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .search-box button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .search-box button:hover:not(:disabled) { opacity: 0.85; }
+
+    .search-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 1rem; }
+    .chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 3px 10px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .chip:hover { border-color: var(--accent); color: var(--accent); }
+
+    #model-status {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+    #model-status.ready { color: var(--green); }
+    #model-status.error { color: var(--red); }
+
+    #search-results {
+      min-height: 40px;
+    }
+    .result-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+    .result-card:hover { border-color: var(--accent); }
+    .result-filename { font-weight: 600; color: var(--text); font-size: 0.9rem; }
+    .result-path { font-size: 0.75rem; color: var(--muted); margin-top: 2px; word-break: break-all; }
+    .result-score {
       background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 0.78rem;
       color: var(--accent);
+      white-space: nowrap;
+      flex-shrink: 0;
     }
+    .search-meta { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.5rem; }
+
+    /* Live test panel */
+    .test-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .test-panel h3 { font-size: 0.9rem; color: var(--muted); margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; }
+    .test-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.875rem;
+    }
+    .test-row:last-child { border-bottom: none; }
+    .test-name { color: var(--text); }
+    .test-detail { font-size: 0.78rem; color: var(--muted); margin-top: 1px; }
+    .badge-pass  { background: rgba(63,185,80,0.15); color: var(--green);  border: 1px solid var(--green);  border-radius: 4px; padding: 2px 8px; font-size: 0.75rem; font-weight: 600; }
+    .badge-fail  { background: rgba(248,81,73,0.15);  color: var(--red);    border: 1px solid var(--red);    border-radius: 4px; padding: 2px 8px; font-size: 0.75rem; font-weight: 600; }
+    .badge-wait  { background: rgba(139,148,158,0.15);color: var(--muted);  border: 1px solid var(--border); border-radius: 4px; padding: 2px 8px; font-size: 0.75rem; font-weight: 600; }
 
     footer {
       border-top: 1px solid var(--border);
@@ -194,19 +261,23 @@
       color: var(--muted);
       text-align: center;
     }
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
 
-  <!-- Navigation -->
+  <!-- Navigation — all links are in-page anchors -->
   <nav>
-    <a href="index.html" class="brand">Qdrant</a>
-    <a href="index.html" class="active">Home</a>
-    <a href="search.html">Search</a>
-    <a href="dashboard.html">Dashboard</a>
+    <a href="#top" class="brand">Qdrant</a>
+    <a href="#top" class="active">Home</a>
+    <a href="#search">Search</a>
+    <a href="#testing">Validation</a>
+    <a href="4_Formula/populate_qdrant.md">Formula</a>
+    <a href="simulation_install_logs.md">Sim Logs</a>
   </nav>
 
-<div class="container">
+<div class="container" id="top">
 
   <header>
     <h1>Qdrant &mdash; Second Brain on Proxmox</h1>
@@ -233,7 +304,7 @@
   </div>
 
   <!-- Folder Overview -->
-  <section>
+  <section id="folders">
     <h2>Folder Structure</h2>
     <div class="folders">
       <div class="folder-card">
@@ -269,13 +340,33 @@
       <div class="folder-card">
         <div class="num">7_Testing_Known</div>
         <h3>Reach Back to Real Proof</h3>
-        <p>Validation, test plans, and acceptance criteria closing the loop to real objectives.</p>
+        <p>Validation, test plans, and acceptance criteria closing the loop.</p>
       </div>
     </div>
   </section>
 
+  <!-- ── SEARCH ── -->
+  <section id="search">
+    <h2>Semantic Search</h2>
+    <p id="model-status" class="badge-wait">Loading embedding model (all-MiniLM-L6-v2)…</p>
+    <div class="search-box">
+      <input type="text" id="search-query" placeholder="Search your second brain…"
+             onkeydown="if(event.key==='Enter') performSearch()" />
+      <button id="search-btn" onclick="performSearch()" disabled>Search</button>
+    </div>
+    <div class="search-chips">
+      <span class="chip" onclick="setQuery('docker setup')">docker setup</span>
+      <span class="chip" onclick="setQuery('proxmox configuration')">proxmox config</span>
+      <span class="chip" onclick="setQuery('git version control')">git version control</span>
+      <span class="chip" onclick="setQuery('kubernetes deployment')">kubernetes</span>
+      <span class="chip" onclick="setQuery('second brain note taking')">note taking</span>
+    </div>
+    <div id="search-meta" class="search-meta"></div>
+    <div id="search-results"></div>
+  </section>
+
   <!-- 1 Real Unknown -->
-  <section>
+  <section id="real-unknown">
     <h2>1_Real_Unknown — Objectives (OKRs)</h2>
     <p><strong>Objective:</strong> Enable fast semantic search across a 25GB second brain hosted on Proxmox.</p>
     <table>
@@ -287,7 +378,7 @@
   </section>
 
   <!-- 2 Environment -->
-  <section>
+  <section id="environment">
     <h2>2_Environment — Roadmap and Use Cases</h2>
     <table>
       <tr><th>Component</th><th>Spec</th><th>Notes</th></tr>
@@ -299,15 +390,15 @@
   </section>
 
   <!-- 3 Simulation -->
-  <section>
+  <section id="simulation">
     <h2>3_Simulation — Examples</h2>
-    <p>See <code>simulation_install_logs.md</code> for AI-assisted planning. Example Qdrant collection creation:</p>
-    <pre><code class="language-bash"># Create a collection with 1536-dim vectors (OpenAI ada-002)
-curl -X PUT http://localhost:6333/collections/second_brain \
+    <p>See <a href="simulation_install_logs.md" style="color:var(--accent)">simulation_install_logs.md</a> for AI-assisted planning. Example Qdrant collection creation:</p>
+    <pre><code class="language-bash"># Create a collection with 384-dim vectors (all-MiniLM-L6-v2)
+curl -X PUT http://192.168.2.227:6333/collections/mac_repo_index \
   -H 'Content-Type: application/json' \
   -d '{
     "vectors": {
-      "size": 1536,
+      "size": 384,
       "distance": "Cosine",
       "on_disk": true
     }
@@ -315,9 +406,9 @@ curl -X PUT http://localhost:6333/collections/second_brain \
   </section>
 
   <!-- 4 Formula -->
-  <section>
+  <section id="formula">
     <h2>4_Formula — Steps</h2>
-    <p>Install Qdrant on Proxmox LXC (Debian/Ubuntu):</p>
+    <p>See full guide: <a href="4_Formula/populate_qdrant.md" style="color:var(--accent)">4_Formula/populate_qdrant.md</a></p>
     <pre><code class="language-bash"># 1. Pull and run Qdrant via Docker
 docker run -d \
   --name qdrant \
@@ -326,7 +417,7 @@ docker run -d \
   qdrant/qdrant
 
 # 2. Verify
-curl http://localhost:6333/healthz</code></pre>
+curl http://192.168.2.227:6333/healthz</code></pre>
 
     <p>Qdrant config for memmap (RAM-limited hosts):</p>
     <pre><code class="language-yaml"># config.yaml
@@ -338,38 +429,21 @@ hnsw_index:
   </section>
 
   <!-- 5 Symbols -->
-  <section>
+  <section id="symbols">
     <h2>5_Symbols — Core Source Code</h2>
-    <p>Python embedding ingestion pipeline:</p>
-    <pre><code class="language-python">from qdrant_client import QdrantClient
-from qdrant_client.models import PointStruct
-import openai, uuid, pathlib
-
-client = QdrantClient(host="localhost", port=6333)
-
-def embed(text: str) -> list[float]:
-    resp = openai.embeddings.create(model="text-embedding-ada-002", input=text)
-    return resp.data[0].embedding
-
-def ingest_markdown(folder: str):
-    for path in pathlib.Path(folder).rglob("*.md"):
-        text = path.read_text(errors="ignore")
-        vector = embed(text[:8000])  # truncate to token limit
-        client.upsert(
-            collection_name="second_brain",
-            points=[PointStruct(
-                id=str(uuid.uuid5(uuid.NAMESPACE_URL, str(path))),
-                vector=vector,
-                payload={"path": str(path), "title": path.stem}
-            )]
-        )
-        print(f"Ingested: {path}")
-
-ingest_markdown("/mnt/second-brain")</code></pre>
+    <p>See <a href="5_Symbols/ingest.py" style="color:var(--accent)">5_Symbols/ingest.py</a> for the full pipeline. Key search call (qdrant-client 1.17+):</p>
+    <pre><code class="language-python">resp = client.query_points(
+    collection_name="mac_repo_index",
+    query=vector,          # list[float], 384-dim
+    limit=5,
+    with_payload=True
+)
+for r in resp.points:
+    print(f"{r.score:.4f}  {r.payload['filename']}")</code></pre>
   </section>
 
   <!-- 6 Semblance -->
-  <section>
+  <section id="semblance">
     <h2>6_Semblance — Error Logs and Solutions</h2>
     <table>
       <tr><th>Error</th><th>Cause</th><th>Solution</th></tr>
@@ -388,38 +462,72 @@ ingest_markdown("/mnt/second-brain")</code></pre>
         <td>ZFS write amplification</td>
         <td>Use <code>recordsize=16k</code>, disable atime</td>
       </tr>
+      <tr>
+        <td><code>client.search() AttributeError</code></td>
+        <td>qdrant-client 1.17 removed search()</td>
+        <td>Use <code>client.query_points(query=vec)</code> instead</td>
+      </tr>
+      <tr>
+        <td>Mixed content blocked</td>
+        <td>https page → http Qdrant request</td>
+        <td>Open page via <code>file://</code> locally, or put Qdrant behind HTTPS</td>
+      </tr>
     </table>
   </section>
 
   <!-- 7 Testing Known -->
-  <section>
+  <section id="testing">
     <h2>7_Testing_Known — Validation</h2>
-    <p>Closing the loop back to objectives in <strong>1_Real_Unknown</strong>:</p>
-    <pre><code class="language-bash"># 1. API health
-curl -f http://localhost:6333/healthz && echo "PASS"
+    <p>Live tests run automatically on page load. Results update below.</p>
 
-# 2. Collection exists
-curl http://localhost:6333/collections/second_brain | python3 -m json.tool
+    <!-- Live test panel (populated by JS) -->
+    <div class="test-panel">
+      <h3>Live Test Results</h3>
+      <div class="test-row">
+        <div>
+          <div class="test-name">1. Qdrant health check</div>
+          <div class="test-detail" id="test1-detail">Checking http://192.168.2.227:6333/healthz…</div>
+        </div>
+        <span id="test1-badge" class="badge-wait">WAIT</span>
+      </div>
+      <div class="test-row">
+        <div>
+          <div class="test-name">2. Collection exists &amp; point count</div>
+          <div class="test-detail" id="test2-detail">Checking collection mac_repo_index…</div>
+        </div>
+        <span id="test2-badge" class="badge-wait">WAIT</span>
+      </div>
+      <div class="test-row">
+        <div>
+          <div class="test-name">3. Embedding model loaded</div>
+          <div class="test-detail" id="test3-detail">Loading all-MiniLM-L6-v2 via Transformers.js…</div>
+        </div>
+        <span id="test3-badge" class="badge-wait">WAIT</span>
+      </div>
+      <div class="test-row">
+        <div>
+          <div class="test-name">4. Semantic search — "docker setup"</div>
+          <div class="test-detail" id="test4-detail">Waiting for model…</div>
+        </div>
+        <span id="test4-badge" class="badge-wait">WAIT</span>
+      </div>
+      <div class="test-row">
+        <div>
+          <div class="test-name">5. Query latency &lt; 1000ms</div>
+          <div class="test-detail" id="test5-detail">Waiting for search…</div>
+        </div>
+        <span id="test5-badge" class="badge-wait">WAIT</span>
+      </div>
+    </div>
 
-# 3. Semantic search smoke test
-curl -X POST http://localhost:6333/collections/second_brain/points/search \
+    <pre><code class="language-bash"># Manual curl equivalent of the page-load search test
+curl -X POST http://192.168.2.227:6333/collections/mac_repo_index/points/query \
   -H 'Content-Type: application/json' \
-  -d '{
-    "vector": [0.1, 0.2, ...],
-    "limit": 5,
-    "with_payload": true
-  }'</code></pre>
-    <table>
-      <tr><th>Test</th><th>Expected</th><th>Status</th></tr>
-      <tr><td>Qdrant healthz</td><td>HTTP 200</td><td>&#x25CB; Pending</td></tr>
-      <tr><td>Collection created</td><td>status: green</td><td>&#x25CB; Pending</td></tr>
-      <tr><td>Ingest 100 notes</td><td>No errors, points count = 100</td><td>&#x25CB; Pending</td></tr>
-      <tr><td>Semantic query latency</td><td>&lt; 1000ms</td><td>&#x25CB; Pending</td></tr>
-    </table>
+  -d '{"query": [0.1, ...], "limit": 5, "with_payload": true}'</code></pre>
   </section>
 
   <!-- Git workflow -->
-  <section>
+  <section id="git">
     <h2>Git Workflow</h2>
     <pre><code class="language-bash"># Before starting a session
 git pull
@@ -431,8 +539,9 @@ git push</code></pre>
   </section>
 
   <footer>
-    Qdrant &mdash; Second Brain Semantic Search &bull; MIT License &bull;
-    <a href="https://qdrant.tech/documentation/" style="color:var(--accent)">Qdrant Docs</a>
+    Qdrant &mdash; Second Brain Semantic Search &bull; Proxmox &bull;
+    <a href="https://qdrant.tech/documentation/">Qdrant Docs</a> &bull;
+    <a href="https://github.com/rifaterdemsahin/qdrant">GitHub</a>
   </footer>
 
 </div>
@@ -443,72 +552,190 @@ git push</code></pre>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
 
-<script>
-let extractor;
+<!-- Transformers.js (loads all-MiniLM-L6-v2 in-browser) -->
+<script type="module">
+  import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js';
 
-async function initExtractor() {
-  extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
-}
+  const QDRANT   = 'http://192.168.2.227:6333';
+  const COLL     = 'mac_repo_index';
+  let   extractor = null;
 
-initExtractor();
+  // ── helpers ──────────────────────────────────────────────────────────────
 
-function setQuery(term) {
-  document.getElementById('search-query').value = term;
-}
+  function setBadge(id, state, label) {
+    const el = document.getElementById(id);
+    el.className = state === 'pass' ? 'badge-pass'
+                 : state === 'fail' ? 'badge-fail'
+                 :                    'badge-wait';
+    el.textContent = label;
+  }
 
-async function performSearch() {
-  const query = document.getElementById('search-query').value;
-  if (!query) return;
+  function setDetail(id, text) {
+    document.getElementById(id).textContent = text;
+  }
 
-  document.getElementById('results').innerHTML = 'Searching...';
-
-  try {
-    const output = await extractor(query, { pooling: 'mean', normalize: true });
-    const vector = Array.from(output.data);
-
-    const response = await fetch('http://192.168.2.227:6333/collections/mac_repo_index/points/search', {
+  async function qdrantQuery(vector, limit = 5) {
+    const res = await fetch(`${QDRANT}/collections/${COLL}/points/query`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        vector: vector,
-        limit: 10,
-        with_payload: true
-      })
+      body: JSON.stringify({ query: vector, limit, with_payload: true })
     });
-
-    const data = await response.json();
-    displayResults(data.result);
-  } catch (error) {
-    document.getElementById('results').innerHTML = 'Error: ' + error.message;
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    // Qdrant ≥1.10: result.points; older: result (array)
+    return json.result.points ?? json.result;
   }
-}
 
-function displayResults(results) {
-  const resultsDiv = document.getElementById('results');
-  resultsDiv.innerHTML = '<h3>Results:</h3>';
-  if (results.length === 0) {
-    resultsDiv.innerHTML += '<p>No results found.</p>';
-    return;
-  }
-  results.forEach(result => {
-    const div = document.createElement('div');
-    div.style.marginBottom = '10px';
-    div.innerHTML = `<p><strong>${result.payload.filename}</strong> - ${result.payload.path}</p><p>Score: ${result.score.toFixed(4)}</p>`;
-    resultsDiv.appendChild(div);
-  });
-}
-</script>
+  // ── cost tracker ─────────────────────────────────────────────────────────
 
-<script>
-  function calcCost() {
+  window.calcCost = function () {
     const start = parseFloat(document.getElementById('cost-start').value) || 0;
     const end   = parseFloat(document.getElementById('cost-end').value)   || 0;
     const diff  = (end - start).toFixed(4);
     document.getElementById('cost-output').textContent =
-      diff >= 0
-        ? `Session cost: $${diff}`
-        : `Invalid range`;
+      end >= start ? `Session cost: $${diff}` : 'Invalid range';
+  };
+
+  // ── search UI ────────────────────────────────────────────────────────────
+
+  window.setQuery = function (term) {
+    document.getElementById('search-query').value = term;
+    document.getElementById('search-query').focus();
+  };
+
+  window.performSearch = async function () {
+    const query = document.getElementById('search-query').value.trim();
+    if (!query || !extractor) return;
+
+    const btn     = document.getElementById('search-btn');
+    const metaEl  = document.getElementById('search-meta');
+    const resEl   = document.getElementById('search-results');
+
+    btn.disabled  = true;
+    resEl.innerHTML = '<div class="search-meta">Encoding query…</div>';
+
+    try {
+      const t0     = performance.now();
+      const output = await extractor(query, { pooling: 'mean', normalize: true });
+      const vector = Array.from(output.data);
+
+      resEl.innerHTML = '<div class="search-meta">Querying Qdrant…</div>';
+      const points = await qdrantQuery(vector, 10);
+      const ms     = (performance.now() - t0).toFixed(0);
+
+      metaEl.textContent = `${points.length} results — ${ms}ms`;
+      resEl.innerHTML    = '';
+
+      if (!points.length) {
+        resEl.innerHTML = '<div class="search-meta">No results found.</div>';
+        return;
+      }
+      points.forEach(r => {
+        const card = document.createElement('div');
+        card.className = 'result-card';
+        card.innerHTML = `
+          <div>
+            <div class="result-filename">${r.payload.filename ?? 'unknown'}</div>
+            <div class="result-path">${r.payload.path ?? ''}</div>
+          </div>
+          <span class="result-score">${r.score.toFixed(4)}</span>`;
+        resEl.appendChild(card);
+      });
+    } catch (err) {
+      resEl.innerHTML = `<div class="search-meta" style="color:var(--red)">Error: ${err.message}</div>`;
+    } finally {
+      btn.disabled = false;
+    }
+  };
+
+  // ── page-load tests ──────────────────────────────────────────────────────
+
+  async function runTests() {
+
+    // Test 1 — health check
+    try {
+      const r = await fetch(`${QDRANT}/healthz`);
+      if (r.ok) {
+        setBadge('test1-badge', 'pass', 'PASS');
+        setDetail('test1-detail', 'Qdrant is healthy at ' + QDRANT);
+      } else {
+        throw new Error(`HTTP ${r.status}`);
+      }
+    } catch (e) {
+      setBadge('test1-badge', 'fail', 'FAIL');
+      setDetail('test1-detail', e.message + ' — is Qdrant running? (see 6_Semblance for CORS/mixed-content tips)');
+    }
+
+    // Test 2 — collection + point count
+    try {
+      const r    = await fetch(`${QDRANT}/collections/${COLL}`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const json = await r.json();
+      const pts  = json.result.points_count;
+      const st   = json.result.status;
+      setBadge('test2-badge', st === 'green' ? 'pass' : 'fail', st === 'green' ? 'PASS' : 'WARN');
+      setDetail('test2-detail', `status: ${st} | points: ${pts.toLocaleString()}`);
+    } catch (e) {
+      setBadge('test2-badge', 'fail', 'FAIL');
+      setDetail('test2-detail', e.message);
+    }
+
+    // Test 3 — model load (may already be in progress)
+    setDetail('test3-detail', 'Loading all-MiniLM-L6-v2 via Transformers.js…');
+    try {
+      extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+      setBadge('test3-badge', 'pass', 'PASS');
+      setDetail('test3-detail', 'Model ready — 384-dim embeddings');
+      const statusEl = document.getElementById('model-status');
+      statusEl.textContent = 'Embedding model ready';
+      statusEl.className   = 'ready';
+      document.getElementById('search-btn').disabled = false;
+    } catch (e) {
+      setBadge('test3-badge', 'fail', 'FAIL');
+      setDetail('test3-detail', e.message);
+      document.getElementById('model-status').textContent = 'Model failed to load: ' + e.message;
+      document.getElementById('model-status').className   = 'error';
+      return; // can't run search tests without model
+    }
+
+    // Test 4 — semantic search smoke test
+    const TEST_QUERY = 'docker setup';
+    let   latencyMs  = 0;
+    try {
+      setDetail('test4-detail', `Encoding "${TEST_QUERY}"…`);
+      const t0     = performance.now();
+      const output = await extractor(TEST_QUERY, { pooling: 'mean', normalize: true });
+      const vector = Array.from(output.data);
+      const points = await qdrantQuery(vector, 3);
+      latencyMs    = performance.now() - t0;
+
+      if (points.length > 0) {
+        setBadge('test4-badge', 'pass', 'PASS');
+        const top = points[0];
+        setDetail('test4-detail',
+          `Top result: "${top.payload.filename}" (score ${top.score.toFixed(4)})`);
+      } else {
+        setBadge('test4-badge', 'fail', 'FAIL');
+        setDetail('test4-detail', 'No results returned — collection may be empty');
+      }
+    } catch (e) {
+      setBadge('test4-badge', 'fail', 'FAIL');
+      setDetail('test4-detail', e.message);
+    }
+
+    // Test 5 — latency check
+    if (latencyMs > 0) {
+      const pass = latencyMs < 1000;
+      setBadge('test5-badge', pass ? 'pass' : 'fail', pass ? 'PASS' : 'SLOW');
+      setDetail('test5-detail', `${latencyMs.toFixed(0)}ms (encode + query) — target < 1000ms`);
+    } else {
+      setBadge('test5-badge', 'fail', 'SKIP');
+      setDetail('test5-detail', 'Search test did not complete');
+    }
   }
+
+  runTests();
 </script>
+
 </body>
 </html>
