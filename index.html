@@ -8,6 +8,9 @@
   <!-- PrismJS theme -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" />
 
+   <!-- Transformers.js -->
+   <script src="https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1"></script>
+
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -402,6 +405,62 @@ git push</code></pre>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+
+<script>
+let extractor;
+
+async function initExtractor() {
+  extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+}
+
+initExtractor();
+
+function setQuery(term) {
+  document.getElementById('search-query').value = term;
+}
+
+async function performSearch() {
+  const query = document.getElementById('search-query').value;
+  if (!query) return;
+
+  document.getElementById('results').innerHTML = 'Searching...';
+
+  try {
+    const output = await extractor(query, { pooling: 'mean', normalize: true });
+    const vector = Array.from(output.data);
+
+    const response = await fetch('http://192.168.2.227:6333/collections/mac_repo_index/points/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        vector: vector,
+        limit: 10,
+        with_payload: true
+      })
+    });
+
+    const data = await response.json();
+    displayResults(data.result);
+  } catch (error) {
+    document.getElementById('results').innerHTML = 'Error: ' + error.message;
+  }
+}
+
+function displayResults(results) {
+  const resultsDiv = document.getElementById('results');
+  resultsDiv.innerHTML = '<h3>Results:</h3>';
+  if (results.length === 0) {
+    resultsDiv.innerHTML += '<p>No results found.</p>';
+    return;
+  }
+  results.forEach(result => {
+    const div = document.createElement('div');
+    div.style.marginBottom = '10px';
+    div.innerHTML = `<p><strong>${result.payload.filename}</strong> - ${result.payload.path}</p><p>Score: ${result.score.toFixed(4)}</p>`;
+    resultsDiv.appendChild(div);
+  });
+}
+</script>
 
 <script>
   function calcCost() {
