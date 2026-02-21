@@ -5,9 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Search — Qdrant Second Brain</title>
 
-  <!-- Transformers.js for client-side embedding -->
-  <script src="https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1"></script>
-
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -21,7 +18,6 @@
       --green: #3fb950;
       --yellow: #d29922;
       --red: #f85149;
-      --purple: #bc8cff;
     }
 
     body {
@@ -29,10 +25,8 @@
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
       line-height: 1.6;
-      padding: 0;
     }
 
-    /* ── Navigation ── */
     nav {
       background: var(--surface);
       border-bottom: 1px solid var(--border);
@@ -40,13 +34,11 @@
       display: flex;
       align-items: center;
       gap: 1.5rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
-    nav .brand {
-      font-weight: 700;
-      color: var(--accent);
-      font-size: 1.1rem;
-      text-decoration: none;
-    }
+    nav .brand { font-weight: 700; color: var(--accent); font-size: 1.1rem; text-decoration: none; }
     nav a {
       color: var(--muted);
       text-decoration: none;
@@ -55,27 +47,55 @@
       border-radius: 6px;
       transition: background 0.2s, color 0.2s;
     }
-    nav a:hover, nav a.active {
-      background: var(--bg);
-      color: var(--accent);
-    }
+    nav a:hover, nav a.active { background: var(--bg); color: var(--accent); }
 
     .container { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; }
 
-    header {
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 1.5rem;
-      margin-bottom: 2rem;
-    }
+    header { border-bottom: 1px solid var(--border); padding-bottom: 1.5rem; margin-bottom: 2rem; }
     header h1 { font-size: 2rem; color: var(--accent); }
     header p  { color: var(--muted); margin-top: 0.5rem; }
 
-    /* ── Search UI ── */
-    .search-box {
-      display: flex;
-      gap: 0.75rem;
+    .status-bar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 16px;
       margin-bottom: 1.5rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
     }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); flex-shrink: 0; }
+    .status-dot.ok   { background: var(--green); }
+    .status-dot.load { background: var(--yellow); animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    .settings {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 1.5rem;
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      align-items: center;
+      font-size: 0.85rem;
+    }
+    .settings label { color: var(--muted); margin-right: 6px; }
+    .settings select, .settings input[type="number"] {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      padding: 4px 8px;
+      font-size: 0.85rem;
+    }
+
+    .search-box { display: flex; gap: 0.75rem; margin-bottom: 1rem; }
     .search-box input {
       flex: 1;
       background: var(--surface);
@@ -99,10 +119,9 @@
       cursor: pointer;
       white-space: nowrap;
     }
-    .search-box button:hover { opacity: 0.85; }
+    .search-box button:hover:not(:disabled) { opacity: 0.85; }
     .search-box button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    /* Quick-pick chips */
     .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; }
     .chip {
       background: var(--surface);
@@ -116,52 +135,6 @@
     }
     .chip:hover { border-color: var(--accent); color: var(--accent); }
 
-    /* Status bar */
-    .status-bar {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px 16px;
-      margin-bottom: 1.5rem;
-      font-size: 0.85rem;
-      color: var(--muted);
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-    .status-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: var(--red);
-      flex-shrink: 0;
-    }
-    .status-dot.ok   { background: var(--green); }
-    .status-dot.load { background: var(--yellow); }
-
-    /* Settings */
-    .settings {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 16px;
-      margin-bottom: 1.5rem;
-      display: flex;
-      gap: 1.5rem;
-      flex-wrap: wrap;
-      align-items: center;
-      font-size: 0.85rem;
-    }
-    .settings label { color: var(--muted); }
-    .settings select, .settings input[type="number"] {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      color: var(--text);
-      padding: 4px 8px;
-      font-size: 0.85rem;
-    }
-
-    /* Results */
     #results { min-height: 200px; }
     .result-card {
       background: var(--surface);
@@ -172,17 +145,8 @@
       transition: border-color 0.2s;
     }
     .result-card:hover { border-color: var(--accent); }
-    .result-card .title {
-      font-weight: 600;
-      color: var(--accent);
-      font-size: 0.95rem;
-    }
-    .result-card .path {
-      font-size: 0.8rem;
-      color: var(--muted);
-      margin-top: 2px;
-      word-break: break-all;
-    }
+    .result-card .title { font-weight: 600; color: var(--accent); font-size: 0.95rem; }
+    .result-card .path  { font-size: 0.8rem; color: var(--muted); margin-top: 2px; word-break: break-all; }
     .result-card .score {
       display: inline-block;
       margin-top: 6px;
@@ -192,19 +156,20 @@
       font-size: 0.75rem;
       color: var(--green);
     }
-    .result-card .snippet {
-      margin-top: 8px;
-      font-size: 0.85rem;
-      color: var(--text);
-      line-height: 1.5;
-    }
 
-    .empty-state {
-      text-align: center;
-      padding: 3rem 1rem;
-      color: var(--muted);
-    }
+    .empty-state { text-align: center; padding: 3rem 1rem; color: var(--muted); }
     .empty-state .icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+
+    .error-box {
+      background: rgba(248,81,73,0.1);
+      border: 1px solid var(--red);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1rem;
+      font-size: 0.875rem;
+      color: var(--red);
+    }
+    .error-box a { color: var(--accent); }
 
     .spinner {
       display: inline-block;
@@ -213,44 +178,45 @@
       border-top-color: var(--accent);
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
+      vertical-align: middle;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    footer {
-      border-top: 1px solid var(--border);
-      padding-top: 1rem;
-      margin-top: 2rem;
-      font-size: 0.8rem;
-      color: var(--muted);
-      text-align: center;
-    }
+    .meta { font-size: 0.8rem; color: var(--muted); margin-bottom: 1rem; }
+
+    footer { border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 2rem; font-size: 0.8rem; color: var(--muted); text-align: center; }
+    footer a { color: var(--accent); text-decoration: none; }
   </style>
 </head>
 <body>
 
-  <!-- Navigation -->
   <nav>
     <a href="../index.html" class="brand">Qdrant</a>
     <a href="../index.html">Home</a>
     <a href="search.html" class="active">Search</a>
     <a href="dashboard.html">Dashboard</a>
-    <a href="../simulation.html">Simulation</a>
-    <a href="../markdown_renderer.html">Docs</a>
+    <a href="../index.html#testing">Validation</a>
   </nav>
 
   <div class="container">
 
     <header>
       <h1>Semantic Search</h1>
-      <p>Search your second brain using vector similarity powered by Qdrant at <code>192.168.2.227:6333</code></p>
+      <p>Search your second brain using vector similarity — Qdrant at <code>192.168.2.227:6333</code></p>
     </header>
 
-    <!-- Status -->
+    <!-- Status bar -->
     <div class="status-bar">
-      <span class="status-dot" id="qdrant-dot"></span>
-      <span id="qdrant-status">Checking Qdrant connection&hellip;</span>
-      <span style="margin-left:auto;" id="model-status">Loading embedding model&hellip;</span>
+      <span class="status-dot load" id="qdrant-dot"></span>
+      <span id="qdrant-status">Checking Qdrant…</span>
+      <span style="margin-left:auto;display:flex;align-items:center;gap:6px;">
+        <span class="spinner" id="model-spinner"></span>
+        <span id="model-status">Loading model…</span>
+      </span>
     </div>
+
+    <!-- Model error box (hidden until needed) -->
+    <div id="model-error" class="error-box" style="display:none"></div>
 
     <!-- Settings -->
     <div class="settings">
@@ -262,27 +228,26 @@
       </div>
       <div>
         <label for="limit-input">Results:</label>
-        <input type="number" id="limit-input" value="10" min="1" max="100" style="width:60px" />
+        <input type="number" id="limit-input" value="10" min="1" max="50" style="width:60px" />
       </div>
     </div>
 
-    <!-- Search Input -->
+    <!-- Search input -->
     <div class="search-box">
-      <input type="text" id="search-query" placeholder="Ask anything about your notes&hellip;" autofocus
-             onkeydown="if(event.key==='Enter') performSearch()" />
-      <button id="search-btn" onclick="performSearch()" disabled>Search</button>
+      <input type="text" id="search-query" placeholder="Ask anything about your notes…" autofocus
+             onkeydown="if(event.key==='Enter') window.performSearch()" />
+      <button id="search-btn" onclick="window.performSearch()" disabled>Search</button>
     </div>
 
-    <!-- Quick Picks -->
+    <!-- Quick picks -->
     <div class="chips">
       <span class="chip" onclick="setQuery('How to set up Qdrant on Proxmox')">Qdrant setup</span>
       <span class="chip" onclick="setQuery('Docker container configuration')">Docker config</span>
-      <span class="chip" onclick="setQuery('Semantic search best practices')">Search tips</span>
       <span class="chip" onclick="setQuery('Python embedding pipeline')">Embeddings</span>
-      <span class="chip" onclick="setQuery('Troubleshooting connection errors')">Debugging</span>
+      <span class="chip" onclick="setQuery('git version control workflow')">Git workflow</span>
+      <span class="chip" onclick="setQuery('kubernetes deployment')">Kubernetes</span>
     </div>
 
-    <!-- Results -->
     <div id="results">
       <div class="empty-state">
         <div class="icon">&#128269;</div>
@@ -291,132 +256,157 @@
     </div>
 
     <footer>
-      Qdrant &mdash; Second Brain Semantic Search &bull; MIT License &bull;
-      <a href="https://qdrant.tech/documentation/" style="color:var(--accent)">Qdrant Docs</a>
+      Qdrant &mdash; Second Brain Semantic Search &bull;
+      <a href="https://qdrant.tech/documentation/">Qdrant Docs</a> &bull;
+      <a href="../index.html">Back to Home</a>
     </footer>
 
   </div>
 
-<script>
-const QDRANT_URL = 'http://192.168.2.227:6333';
-let extractor = null;
+<!-- ES module: the ONLY correct way to use @xenova/transformers -->
+<script type="module">
+  import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js';
 
-// ── Init embedding model ──
-async function initExtractor() {
-  try {
-    document.getElementById('model-status').innerHTML = '<span class="spinner"></span> Loading model&hellip;';
-    extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
-    document.getElementById('model-status').textContent = 'Model ready';
-    document.getElementById('search-btn').disabled = false;
-  } catch (e) {
-    document.getElementById('model-status').textContent = 'Model failed to load';
-    console.error(e);
+  // Prevent Transformers.js from trying to load local models
+  env.allowLocalModels = false;
+
+  const QDRANT = 'http://192.168.2.227:6333';
+  let   extractor = null;
+
+  // ── helpers ──────────────────────────────────────────────────────────────
+
+  function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
   }
-}
 
-// ── Check Qdrant health ──
-async function checkQdrant() {
-  const dot = document.getElementById('qdrant-dot');
-  const txt = document.getElementById('qdrant-status');
-  try {
-    const r = await fetch(QDRANT_URL + '/healthz', { signal: AbortSignal.timeout(3000) });
-    if (r.ok) {
-      dot.className = 'status-dot ok';
-      txt.textContent = 'Qdrant connected';
-      // Populate collections dropdown
-      const cols = await fetch(QDRANT_URL + '/collections').then(r => r.json());
-      const sel = document.getElementById('collection-select');
-      sel.innerHTML = '';
-      (cols.result?.collections || []).forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c.name;
-        opt.textContent = c.name;
-        sel.appendChild(opt);
-      });
-    } else {
-      dot.className = 'status-dot';
-      txt.textContent = 'Qdrant returned ' + r.status;
-    }
-  } catch {
-    dot.className = 'status-dot';
-    txt.textContent = 'Qdrant unreachable';
-  }
-}
-
-// ── Quick-pick ──
-function setQuery(term) {
-  document.getElementById('search-query').value = term;
-  document.getElementById('search-query').focus();
-}
-
-// ── Search ──
-async function performSearch() {
-  const query = document.getElementById('search-query').value.trim();
-  if (!query || !extractor) return;
-
-  const collection = document.getElementById('collection-select').value;
-  const limit = parseInt(document.getElementById('limit-input').value) || 10;
-  const resultsDiv = document.getElementById('results');
-
-  resultsDiv.innerHTML = '<div class="empty-state"><span class="spinner" style="width:24px;height:24px;border-width:3px;"></span><p style="margin-top:12px">Searching&hellip;</p></div>';
-
-  try {
-    // Generate embedding
-    const output = await extractor(query, { pooling: 'mean', normalize: true });
-    const vector = Array.from(output.data);
-
-    // Query Qdrant
-    const response = await fetch(`${QDRANT_URL}/collections/${collection}/points/search`, {
+  async function qdrantQuery(collection, vector, limit) {
+    const res = await fetch(`${QDRANT}/collections/${collection}/points/query`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ vector, limit, with_payload: true })
+      body: JSON.stringify({ query: vector, limit, with_payload: true })
     });
-
-    const data = await response.json();
-    displayResults(data.result || []);
-  } catch (error) {
-    resultsDiv.innerHTML = `<div class="empty-state"><div class="icon">&#9888;&#65039;</div><p>Error: ${error.message}</p></div>`;
-  }
-}
-
-function displayResults(results) {
-  const resultsDiv = document.getElementById('results');
-
-  if (!results.length) {
-    resultsDiv.innerHTML = '<div class="empty-state"><div class="icon">&#128528;</div><p>No results found</p></div>';
-    return;
+    if (!res.ok) throw new Error(`Qdrant returned HTTP ${res.status}`);
+    const json = await res.json();
+    // qdrant-client ≥1.10 wraps in .points; older returns bare array
+    return json.result?.points ?? json.result ?? [];
   }
 
-  resultsDiv.innerHTML = `<p style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem;">${results.length} results</p>`;
+  // ── Qdrant health + collections ─────────────────────────────────────────
 
-  results.forEach(r => {
-    const card = document.createElement('div');
-    card.className = 'result-card';
+  async function checkQdrant() {
+    const dot = document.getElementById('qdrant-dot');
+    const txt = document.getElementById('qdrant-status');
+    try {
+      const r = await fetch(`${QDRANT}/healthz`, { signal: AbortSignal.timeout(4000) });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      dot.className = 'status-dot ok';
+      txt.textContent = 'Qdrant connected';
 
-    const filename = r.payload?.filename || r.payload?.title || r.payload?.path || 'Untitled';
-    const path = r.payload?.path || '';
-    const snippet = r.payload?.text || r.payload?.content || '';
-    const truncSnippet = snippet.length > 300 ? snippet.substring(0, 300) + '&hellip;' : snippet;
+      const cols = await fetch(`${QDRANT}/collections`).then(r => r.json());
+      const sel  = document.getElementById('collection-select');
+      const list = cols.result?.collections ?? [];
+      if (list.length) {
+        sel.innerHTML = '';
+        list.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = opt.textContent = c.name;
+          if (c.name === 'mac_repo_index') opt.selected = true;
+          sel.appendChild(opt);
+        });
+      }
+    } catch (e) {
+      dot.className = 'status-dot';
+      txt.textContent = `Qdrant unreachable — ${e.message}`;
+    }
+  }
 
-    card.innerHTML = `
-      <div class="title">${escapeHtml(filename)}</div>
-      ${path ? `<div class="path">${escapeHtml(path)}</div>` : ''}
-      <span class="score">Score: ${r.score.toFixed(4)}</span>
-      ${truncSnippet ? `<div class="snippet">${escapeHtml(truncSnippet)}</div>` : ''}
-    `;
-    resultsDiv.appendChild(card);
-  });
-}
+  // ── Model load ───────────────────────────────────────────────────────────
 
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
+  async function initModel() {
+    const statusEl  = document.getElementById('model-status');
+    const spinnerEl = document.getElementById('model-spinner');
+    const errorEl   = document.getElementById('model-error');
 
-// ── Boot ──
-checkQdrant();
-initExtractor();
+    try {
+      statusEl.textContent = 'Downloading all-MiniLM-L6-v2…';
+      extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+      spinnerEl.style.display = 'none';
+      statusEl.textContent    = 'Model ready';
+      statusEl.style.color    = 'var(--green)';
+      document.getElementById('search-btn').disabled = false;
+    } catch (e) {
+      spinnerEl.style.display = 'none';
+      statusEl.textContent    = 'Model failed to load';
+      statusEl.style.color    = 'var(--red)';
+      errorEl.style.display   = 'block';
+      errorEl.innerHTML = `
+        <strong>Model failed to load</strong> — ${escapeHtml(e.message)}<br><br>
+        Common causes &amp; fixes (see also
+        <a href="../index.html#semblance">6_Semblance</a>):<br>
+        &bull; <strong>Script tag instead of module import</strong> — <code>&lt;script src=&gt;</code>
+          does not expose <code>pipeline</code> as a global; must use
+          <code>&lt;script type="module"&gt; import { pipeline } from '…'</code><br>
+        &bull; <strong>Mixed content</strong> — if the page is served over HTTPS, the browser
+          blocks fetches to the HuggingFace CDN over HTTP. Open via
+          <code>file://</code> or <code>http://localhost</code>.<br>
+        &bull; <strong>No internet</strong> — model weights (~90 MB) are fetched from HuggingFace
+          on first load. Check network connectivity.<br>
+        &bull; <strong>CSP header</strong> — some servers add a Content-Security-Policy that
+          blocks <code>connect-src</code> to external origins.
+      `;
+    }
+  }
+
+  // ── Search ───────────────────────────────────────────────────────────────
+
+  window.setQuery = function (term) {
+    document.getElementById('search-query').value = term;
+    document.getElementById('search-query').focus();
+  };
+
+  window.performSearch = async function () {
+    const query      = document.getElementById('search-query').value.trim();
+    const collection = document.getElementById('collection-select').value;
+    const limit      = parseInt(document.getElementById('limit-input').value) || 10;
+    const resultsDiv = document.getElementById('results');
+
+    if (!query || !extractor) return;
+
+    resultsDiv.innerHTML = '<div class="empty-state"><span class="spinner" style="width:24px;height:24px;border-width:3px;"></span><p style="margin-top:12px">Searching…</p></div>';
+
+    try {
+      const t0     = performance.now();
+      const output = await extractor(query, { pooling: 'mean', normalize: true });
+      const vector = Array.from(output.data);
+      const points = await qdrantQuery(collection, vector, limit);
+      const ms     = (performance.now() - t0).toFixed(0);
+
+      if (!points.length) {
+        resultsDiv.innerHTML = '<div class="empty-state"><div class="icon">&#128528;</div><p>No results found</p></div>';
+        return;
+      }
+
+      resultsDiv.innerHTML = `<p class="meta">${points.length} results &mdash; ${ms}ms</p>`;
+      points.forEach(r => {
+        const card = document.createElement('div');
+        card.className = 'result-card';
+        card.innerHTML = `
+          <div class="title">${escapeHtml(r.payload?.filename ?? r.payload?.title ?? 'Untitled')}</div>
+          ${r.payload?.path ? `<div class="path">${escapeHtml(r.payload.path)}</div>` : ''}
+          <span class="score">Score: ${r.score.toFixed(4)}</span>`;
+        resultsDiv.appendChild(card);
+      });
+    } catch (err) {
+      resultsDiv.innerHTML = `<div class="empty-state"><div class="icon">&#9888;&#65039;</div><p>Error: ${escapeHtml(err.message)}</p></div>`;
+    }
+  };
+
+  // ── Boot ─────────────────────────────────────────────────────────────────
+  checkQdrant();
+  initModel();
 </script>
+
 </body>
 </html>
