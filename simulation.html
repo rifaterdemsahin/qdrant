@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulation — Qdrant Second Brain</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d1117; --surface: #161b22; --border: #30363d;
+      --text: #c9d1d9; --muted: #8b949e; --accent: #58a6ff;
+      --green: #3fb950; --yellow: #d29922; --red: #f85149;
+    }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; line-height: 1.6; padding: 0; }
+
+    /* ── Nav ── */
+    nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.75rem 1.5rem; display: flex; align-items: center; gap: 1.5rem; position: sticky; top: 0; z-index: 100; }
+    nav .brand { font-weight: 700; color: var(--accent); font-size: 1.1rem; text-decoration: none; }
+    nav a { color: var(--muted); text-decoration: none; font-size: 0.9rem; padding: 4px 10px; border-radius: 6px; transition: background 0.2s, color 0.2s; }
+    nav a:hover, nav a.active { background: var(--bg); color: var(--accent); }
+
+    .container { max-width: 960px; margin: 0 auto; padding: 2rem 1rem; }
+    header { border-bottom: 1px solid var(--border); padding-bottom: 1.5rem; margin-bottom: 2rem; }
+    header h1 { font-size: 2rem; color: var(--accent); }
+    header p  { color: var(--muted); margin-top: 0.5rem; }
+
+    /* ── Carousel ── */
+    .carousel {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 2rem;
+    }
+    .carousel-track {
+      display: flex;
+      transition: transform 0.5s ease;
+    }
+    .carousel-slide {
+      min-width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1.5rem;
+    }
+    .carousel-slide img {
+      max-width: 100%;
+      max-height: 520px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      object-fit: contain;
+      cursor: zoom-in;
+    }
+    .carousel-slide .caption {
+      margin-top: 0.75rem;
+      font-size: 0.9rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    /* Buttons */
+    .carousel-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(22, 27, 34, 0.85);
+      border: 1px solid var(--border);
+      color: var(--accent);
+      font-size: 1.5rem;
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s;
+      z-index: 10;
+    }
+    .carousel-btn:hover { background: var(--surface); }
+    .carousel-btn.prev { left: 12px; }
+    .carousel-btn.next { right: 12px; }
+
+    /* Dots */
+    .carousel-dots {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+    }
+    .carousel-dots .dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--border);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .carousel-dots .dot.active { background: var(--accent); }
+
+    /* Counter */
+    .carousel-counter {
+      position: absolute;
+      top: 12px; right: 16px;
+      background: rgba(22, 27, 34, 0.85);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2px 12px;
+      font-size: 0.75rem;
+      color: var(--muted);
+      z-index: 10;
+    }
+
+    /* ── Thumbnail Grid ── */
+    .thumb-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .thumb-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .thumb-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .thumb-card img {
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+    }
+    .thumb-card .label {
+      padding: 8px 12px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* ── Lightbox ── */
+    .lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.92);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      cursor: zoom-out;
+    }
+    .lightbox.open { display: flex; }
+    .lightbox img {
+      max-width: 95vw;
+      max-height: 95vh;
+      border-radius: 8px;
+    }
+    .lightbox-close {
+      position: absolute;
+      top: 16px; right: 20px;
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 2rem;
+      cursor: pointer;
+    }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding-top: 1rem; margin-top: 2rem;
+      font-size: 0.8rem; color: var(--muted); text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="index.html" class="brand">Qdrant</a>
+    <a href="index.html">Home</a>
+    <a href="5_Symbols/search.html">Search</a>
+    <a href="5_Symbols/dashboard.html">Dashboard</a>
+    <a href="simulation.html" class="active">Simulation</a>
+    <a href="markdown_renderer.html">Docs</a>
+  </nav>
+
+  <div class="container">
+
+    <header>
+      <h1>Simulation Gallery</h1>
+      <p>Screenshots and visual proof from the Qdrant setup on Proxmox — swipe or click to browse.</p>
+    </header>
+
+    <!-- Carousel -->
+    <div class="carousel" id="carousel">
+      <span class="carousel-counter" id="counter">1 / 4</span>
+      <button class="carousel-btn prev" onclick="slide(-1)">&#8249;</button>
+      <button class="carousel-btn next" onclick="slide(1)">&#8250;</button>
+
+      <div class="carousel-track" id="track">
+        <div class="carousel-slide">
+          <img src="3_Simulation/qdrant_console_run.png" alt="Qdrant console run" onclick="openLightbox(this.src)" />
+          <div class="caption">Qdrant Docker container running in Proxmox LXC console</div>
+        </div>
+        <div class="carousel-slide">
+          <img src="3_Simulation/qdrant_db_collection.png" alt="Qdrant DB collection" onclick="openLightbox(this.src)" />
+          <div class="caption">Collection created — <code>mac_repo_index</code> with 384-dim cosine vectors</div>
+        </div>
+        <div class="carousel-slide">
+          <img src="3_Simulation/points_increases_with_ingestion.png" alt="Points increasing" onclick="openLightbox(this.src)" />
+          <div class="caption">Points count increasing during ingestion — 28,003 files indexed</div>
+        </div>
+        <div class="carousel-slide">
+          <img src="3_Simulation/after_Search.png" alt="After search" onclick="openLightbox(this.src)" />
+          <div class="caption">Semantic search results returned from Qdrant</div>
+        </div>
+      </div>
+
+      <div class="carousel-dots" id="dots"></div>
+    </div>
+
+    <!-- Thumbnail Grid -->
+    <section>
+      <h2 style="font-size:1.25rem; border-bottom:1px solid var(--border); padding-bottom:0.5rem; margin-bottom:1rem;">All Screenshots</h2>
+      <div class="thumb-grid">
+        <div class="thumb-card" onclick="goTo(0)">
+          <img src="3_Simulation/qdrant_console_run.png" alt="Console run" />
+          <div class="label">Console Run</div>
+        </div>
+        <div class="thumb-card" onclick="goTo(1)">
+          <img src="3_Simulation/qdrant_db_collection.png" alt="DB Collection" />
+          <div class="label">DB Collection</div>
+        </div>
+        <div class="thumb-card" onclick="goTo(2)">
+          <img src="3_Simulation/points_increases_with_ingestion.png" alt="Ingestion progress" />
+          <div class="label">Ingestion Progress</div>
+        </div>
+        <div class="thumb-card" onclick="goTo(3)">
+          <img src="3_Simulation/after_Search.png" alt="Search results" />
+          <div class="label">Search Results</div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      Qdrant &mdash; Second Brain Semantic Search &bull; MIT License &bull;
+      <a href="https://qdrant.tech/documentation/" style="color:var(--accent)">Qdrant Docs</a>
+    </footer>
+
+  </div>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <button class="lightbox-close">&times;</button>
+    <img id="lightbox-img" src="" alt="Full size" />
+  </div>
+
+<script>
+const track  = document.getElementById('track');
+const dots   = document.getElementById('dots');
+const counter = document.getElementById('counter');
+const slides = track.querySelectorAll('.carousel-slide');
+let current = 0;
+
+// Build dots
+slides.forEach((_, i) => {
+  const d = document.createElement('span');
+  d.className = 'dot' + (i === 0 ? ' active' : '');
+  d.onclick = () => goTo(i);
+  dots.appendChild(d);
+});
+
+function goTo(i) {
+  current = ((i % slides.length) + slides.length) % slides.length;
+  track.style.transform = `translateX(-${current * 100}%)`;
+  dots.querySelectorAll('.dot').forEach((d, j) => d.classList.toggle('active', j === current));
+  counter.textContent = `${current + 1} / ${slides.length}`;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function slide(dir) { goTo(current + dir); }
+
+// Keyboard navigation
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') slide(1);
+  if (e.key === 'ArrowLeft')  slide(-1);
+  if (e.key === 'Escape')     closeLightbox();
+});
+
+// Touch swipe
+let touchX = 0;
+document.getElementById('carousel').addEventListener('touchstart', e => { touchX = e.touches[0].clientX; });
+document.getElementById('carousel').addEventListener('touchend', e => {
+  const diff = touchX - e.changedTouches[0].clientX;
+  if (Math.abs(diff) > 50) slide(diff > 0 ? 1 : -1);
+});
+
+// Auto-play (pause on hover)
+let autoplay = setInterval(() => slide(1), 5000);
+document.getElementById('carousel').addEventListener('mouseenter', () => clearInterval(autoplay));
+document.getElementById('carousel').addEventListener('mouseleave', () => { autoplay = setInterval(() => slide(1), 5000); });
+
+// Lightbox
+function openLightbox(src) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+}
+</script>
+</body>
+</html>
