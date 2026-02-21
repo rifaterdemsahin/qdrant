@@ -1,4 +1,11 @@
 
+> **Environment Setup Guides** — Step-by-step instructions extracted from this conversation:
+> - [Proxmox (Server)](env_proxmox.md) — LXC creation, Docker, Qdrant config, firewall, maintenance
+> - [Windows (Workstation)](env_windows.md) — Python setup, daily ingestion, Task Scheduler
+> - [macOS (Workstation)](env_macos.md) — Homebrew, venv, daily ingestion, launchd automation
+
+---
+
 Conversation with Gemini
 You said
 can proxmox with 4 cores run my qdrant vector db which has 25 gb git repo mostly markdown and images
@@ -2814,3 +2821,15 @@ Your CPU (4 cores) will spike as Qdrant builds the HNSW index.
 Your RAM (12GB) will fill up—this is normal! Qdrant is just caching the vectors for faster retrieval later.
 
 Would you like me to show you how to enable GPU/MPS acceleration on your Mac to make the indexing even faster?
+
+---
+
+## Environment Setup Guides
+
+The actionable setup steps from this conversation have been extracted into standalone guides:
+
+| Guide | Platform | Key Topics |
+|-------|----------|------------|
+| [env_proxmox.md](env_proxmox.md) | Proxmox LXC | LXC creation, Docker install, Qdrant launch, firewall, snapshots, memmap config |
+| [env_windows.md](env_windows.md) | Windows 10/11 | Python + pip, daily ingestion script, Task Scheduler automation |
+| [env_macos.md](env_macos.md) | macOS (Intel/Apple Silicon) | Homebrew, venv, MPS acceleration, launchd daily cron |
