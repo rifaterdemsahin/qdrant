@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Qdrant — Second Brain Semantic Search on Proxmox</title>
+
+  <!-- PrismJS theme -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --green: #3fb950;
+      --yellow: #d29922;
+      --red: #f85149;
+      --purple: #bc8cff;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      padding: 2rem 1rem;
+    }
+
+    .container { max-width: 900px; margin: 0 auto; }
+
+    header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    header h1 { font-size: 2rem; color: var(--accent); }
+    header p  { color: var(--muted); margin-top: 0.5rem; }
+
+    .badge {
+      display: inline-block;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-right: 6px;
+      margin-top: 8px;
+    }
+
+    /* Folder grid */
+    .folders {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .folder-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      transition: border-color 0.2s;
+    }
+    .folder-card:hover { border-color: var(--accent); }
+
+    .folder-card .num {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .folder-card h3 {
+      font-size: 1rem;
+      color: var(--accent);
+      margin: 4px 0 6px;
+    }
+    .folder-card p { font-size: 0.85rem; color: var(--muted); }
+
+    /* Sections */
+    section { margin-bottom: 2.5rem; }
+
+    section h2 {
+      font-size: 1.25rem;
+      color: var(--text);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    section p { color: var(--muted); margin-bottom: 0.75rem; font-size: 0.9rem; }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+      margin-bottom: 1rem;
+    }
+    th {
+      background: var(--surface);
+      color: var(--muted);
+      text-align: left;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      font-weight: 600;
+    }
+    td {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    tr:hover td { background: var(--surface); }
+
+    /* Cost tracker */
+    .cost-tracker {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+    .cost-tracker label { font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 4px; }
+    .cost-tracker input {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      padding: 4px 8px;
+      font-size: 0.875rem;
+      width: 140px;
+    }
+    .cost-tracker button {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: 4px;
+      padding: 6px 14px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      align-self: flex-end;
+    }
+    .cost-tracker button:hover { opacity: 0.85; }
+    #cost-output { font-size: 0.85rem; color: var(--green); align-self: flex-end; }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding-top: 1rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>Qdrant &mdash; Second Brain on Proxmox</h1>
+    <p>Semantic search across a 25GB second brain (markdown + images) using Qdrant vector DB on a Proxmox host.</p>
+    <span class="badge">Proxmox</span>
+    <span class="badge">Qdrant</span>
+    <span class="badge">Vector DB</span>
+    <span class="badge">Semantic Search</span>
+    <span class="badge">Second Brain</span>
+  </header>
+
+  <!-- TTS Cost Tracker -->
+  <div class="cost-tracker">
+    <div>
+      <label>Session Start Cost ($)</label>
+      <input type="number" id="cost-start" placeholder="0.000" step="0.001" min="0" />
+    </div>
+    <div>
+      <label>Session End Cost ($)</label>
+      <input type="number" id="cost-end" placeholder="0.000" step="0.001" min="0" />
+    </div>
+    <button onclick="calcCost()">Calculate</button>
+    <span id="cost-output"></span>
+  </div>
+
+  <!-- Folder Overview -->
+  <section>
+    <h2>Folder Structure</h2>
+    <div class="folders">
+      <div class="folder-card">
+        <div class="num">1_Real_Unknown</div>
+        <h3>Goal</h3>
+        <p>Objectives and key results — start with the unknown problem.</p>
+      </div>
+      <div class="folder-card">
+        <div class="num">2_Environment</div>
+        <h3>Read Files</h3>
+        <p>Roadmap, use cases, and environment specifications.</p>
+      </div>
+      <div class="folder-card">
+        <div class="num">3_Simulation</div>
+        <h3>Examples</h3>
+        <p>Simulated installs, UI prototypes, and example workflows.</p>
+      </div>
+      <div class="folder-card">
+        <div class="num">4_Formula</div>
+        <h3>Steps</h3>
+        <p>Step-by-step guides and best practices (GPT-assisted).</p>
+      </div>
+      <div class="folder-card">
+        <div class="num">5_Symbols</div>
+        <h3>Code</h3>
+        <p>Core source files: config, embedding pipeline, query interface.</p>
+      </div>
+      <div class="folder-card">
+        <div class="num">6_Semblance</div>
+        <h3>Errors</h3>
+        <p>Error logs, causes, solutions, and debugging tips.</p>
+      </div>
+      <div class="folder-card">
+        <div class="num">7_Testing_Known</div>
+        <h3>Reach Back to Real Proof</h3>
+        <p>Validation, test plans, and acceptance criteria closing the loop to real objectives.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 1 Real Unknown -->
+  <section>
+    <h2>1_Real_Unknown — Objectives (OKRs)</h2>
+    <p><strong>Objective:</strong> Enable fast semantic search across a 25GB second brain hosted on Proxmox.</p>
+    <table>
+      <tr><th>Key Result</th><th>Target</th></tr>
+      <tr><td>Qdrant running in Proxmox VM/LXC</td><td>Healthy API response on port 6333</td></tr>
+      <tr><td>Embeddings ingested</td><td>All markdown + images indexed</td></tr>
+      <tr><td>Query latency</td><td>&lt; 1 second for top-5 results</td></tr>
+    </table>
+  </section>
+
+  <!-- 2 Environment -->
+  <section>
+    <h2>2_Environment — Roadmap and Use Cases</h2>
+    <table>
+      <tr><th>Component</th><th>Spec</th><th>Notes</th></tr>
+      <tr><td>CPU</td><td>4 cores</td><td>High during indexing, low at idle</td></tr>
+      <tr><td>RAM</td><td>8–16 GB</td><td>Critical — use memmap if limited</td></tr>
+      <tr><td>Storage</td><td>SSD/NVMe</td><td>ZFS overhead can slow indexing</td></tr>
+      <tr><td>Qdrant</td><td>Latest stable</td><td>Rust binary or Docker container</td></tr>
+    </table>
+  </section>
+
+  <!-- 3 Simulation -->
+  <section>
+    <h2>3_Simulation — Examples</h2>
+    <p>See <code>simulation_install_logs.md</code> for AI-assisted planning. Example Qdrant collection creation:</p>
+    <pre><code class="language-bash"># Create a collection with 1536-dim vectors (OpenAI ada-002)
+curl -X PUT http://localhost:6333/collections/second_brain \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "vectors": {
+      "size": 1536,
+      "distance": "Cosine",
+      "on_disk": true
+    }
+  }'</code></pre>
+  </section>
+
+  <!-- 4 Formula -->
+  <section>
+    <h2>4_Formula — Steps</h2>
+    <p>Install Qdrant on Proxmox LXC (Debian/Ubuntu):</p>
+    <pre><code class="language-bash"># 1. Pull and run Qdrant via Docker
+docker run -d \
+  --name qdrant \
+  -p 6333:6333 \
+  -v $(pwd)/qdrant_storage:/qdrant/storage \
+  qdrant/qdrant
+
+# 2. Verify
+curl http://localhost:6333/healthz</code></pre>
+
+    <p>Qdrant config for memmap (RAM-limited hosts):</p>
+    <pre><code class="language-yaml"># config.yaml
+storage:
+  on_disk_payload: true
+
+hnsw_index:
+  on_disk: true</code></pre>
+  </section>
+
+  <!-- 5 Symbols -->
+  <section>
+    <h2>5_Symbols — Core Source Code</h2>
+    <p>Python embedding ingestion pipeline:</p>
+    <pre><code class="language-python">from qdrant_client import QdrantClient
+from qdrant_client.models import PointStruct
+import openai, uuid, pathlib
+
+client = QdrantClient(host="localhost", port=6333)
+
+def embed(text: str) -> list[float]:
+    resp = openai.embeddings.create(model="text-embedding-ada-002", input=text)
+    return resp.data[0].embedding
+
+def ingest_markdown(folder: str):
+    for path in pathlib.Path(folder).rglob("*.md"):
+        text = path.read_text(errors="ignore")
+        vector = embed(text[:8000])  # truncate to token limit
+        client.upsert(
+            collection_name="second_brain",
+            points=[PointStruct(
+                id=str(uuid.uuid5(uuid.NAMESPACE_URL, str(path))),
+                vector=vector,
+                payload={"path": str(path), "title": path.stem}
+            )]
+        )
+        print(f"Ingested: {path}")
+
+ingest_markdown("/mnt/second-brain")</code></pre>
+  </section>
+
+  <!-- 6 Semblance -->
+  <section>
+    <h2>6_Semblance — Error Logs and Solutions</h2>
+    <table>
+      <tr><th>Error</th><th>Cause</th><th>Solution</th></tr>
+      <tr>
+        <td><code>OOM killed</code></td>
+        <td>Vectors loaded into RAM exceed limit</td>
+        <td>Enable <code>on_disk: true</code> in collection config</td>
+      </tr>
+      <tr>
+        <td><code>Connection refused :6333</code></td>
+        <td>Qdrant not running or firewall blocking</td>
+        <td>Check <code>docker ps</code>, open port in Proxmox firewall</td>
+      </tr>
+      <tr>
+        <td>Slow indexing on ZFS</td>
+        <td>ZFS write amplification</td>
+        <td>Use <code>recordsize=16k</code>, disable atime</td>
+      </tr>
+    </table>
+  </section>
+
+  <!-- 7 Testing Known -->
+  <section>
+    <h2>7_Testing_Known — Validation</h2>
+    <p>Closing the loop back to objectives in <strong>1_Real_Unknown</strong>:</p>
+    <pre><code class="language-bash"># 1. API health
+curl -f http://localhost:6333/healthz && echo "PASS"
+
+# 2. Collection exists
+curl http://localhost:6333/collections/second_brain | python3 -m json.tool
+
+# 3. Semantic search smoke test
+curl -X POST http://localhost:6333/collections/second_brain/points/search \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "vector": [0.1, 0.2, ...],
+    "limit": 5,
+    "with_payload": true
+  }'</code></pre>
+    <table>
+      <tr><th>Test</th><th>Expected</th><th>Status</th></tr>
+      <tr><td>Qdrant healthz</td><td>HTTP 200</td><td>&#x25CB; Pending</td></tr>
+      <tr><td>Collection created</td><td>status: green</td><td>&#x25CB; Pending</td></tr>
+      <tr><td>Ingest 100 notes</td><td>No errors, points count = 100</td><td>&#x25CB; Pending</td></tr>
+      <tr><td>Semantic query latency</td><td>&lt; 1000ms</td><td>&#x25CB; Pending</td></tr>
+    </table>
+  </section>
+
+  <!-- Git workflow -->
+  <section>
+    <h2>Git Workflow</h2>
+    <pre><code class="language-bash"># Before starting a session
+git pull
+
+# After a session
+git add .
+git commit -m "session: describe what changed"
+git push</code></pre>
+  </section>
+
+  <footer>
+    Qdrant &mdash; Second Brain Semantic Search &bull; Proxmox Setup &bull;
+    <a href="https://qdrant.tech/documentation/" style="color:var(--accent)">Qdrant Docs</a>
+  </footer>
+
+</div>
+
+<!-- PrismJS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+
+<script>
+  function calcCost() {
+    const start = parseFloat(document.getElementById('cost-start').value) || 0;
+    const end   = parseFloat(document.getElementById('cost-end').value)   || 0;
+    const diff  = (end - start).toFixed(4);
+    document.getElementById('cost-output').textContent =
+      diff >= 0
+        ? `Session cost: $${diff}`
+        : `Invalid range`;
+  }
+</script>
+</body>
+</html>
