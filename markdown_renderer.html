@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Docs — Qdrant Second Brain</title>
+
+  <!-- Marked.js for Markdown rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- PrismJS for syntax highlighting inside rendered markdown -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d1117; --surface: #161b22; --border: #30363d;
+      --text: #c9d1d9; --muted: #8b949e; --accent: #58a6ff;
+      --green: #3fb950; --yellow: #d29922; --red: #f85149;
+    }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; line-height: 1.6; padding: 0; }
+
+    /* ── Nav ── */
+    nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.75rem 1.5rem; display: flex; align-items: center; gap: 1.5rem; position: sticky; top: 0; z-index: 100; }
+    nav .brand { font-weight: 700; color: var(--accent); font-size: 1.1rem; text-decoration: none; }
+    nav a { color: var(--muted); text-decoration: none; font-size: 0.9rem; padding: 4px 10px; border-radius: 6px; transition: background 0.2s, color 0.2s; }
+    nav a:hover, nav a.active { background: var(--bg); color: var(--accent); }
+
+    /* ── Layout ── */
+    .page { display: flex; min-height: calc(100vh - 50px); }
+
+    /* Sidebar */
+    .sidebar {
+      width: 280px;
+      min-width: 280px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 1.5rem 1rem;
+      overflow-y: auto;
+      position: sticky;
+      top: 50px;
+      height: calc(100vh - 50px);
+    }
+    .sidebar h3 {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+      margin-top: 1.25rem;
+    }
+    .sidebar h3:first-child { margin-top: 0; }
+    .sidebar a {
+      display: block;
+      padding: 6px 10px;
+      border-radius: 6px;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 0.85rem;
+      transition: background 0.15s, color 0.15s;
+      margin-bottom: 2px;
+    }
+    .sidebar a:hover { background: var(--bg); color: var(--accent); }
+    .sidebar a.active { background: var(--bg); color: var(--accent); font-weight: 600; }
+    .sidebar .folder-icon { margin-right: 6px; opacity: 0.6; }
+
+    /* Content */
+    .content {
+      flex: 1;
+      padding: 2rem 2.5rem;
+      max-width: 800px;
+      overflow-y: auto;
+    }
+    .content .breadcrumb {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+    .content .breadcrumb a { color: var(--accent); text-decoration: none; }
+
+    /* ── Markdown rendered content ── */
+    .md-body h1 { font-size: 1.75rem; color: var(--accent); margin: 1.5rem 0 0.75rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+    .md-body h2 { font-size: 1.35rem; color: var(--text); margin: 1.25rem 0 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
+    .md-body h3 { font-size: 1.1rem; color: var(--text); margin: 1rem 0 0.4rem; }
+    .md-body h4, .md-body h5, .md-body h6 { font-size: 0.95rem; color: var(--muted); margin: 0.75rem 0 0.3rem; }
+    .md-body p  { margin: 0.5rem 0; color: var(--text); }
+    .md-body a  { color: var(--accent); text-decoration: none; }
+    .md-body a:hover { text-decoration: underline; }
+    .md-body ul, .md-body ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+    .md-body li { margin: 0.25rem 0; }
+    .md-body blockquote {
+      border-left: 3px solid var(--accent);
+      padding: 0.5rem 1rem;
+      margin: 0.75rem 0;
+      background: var(--surface);
+      border-radius: 0 6px 6px 0;
+      color: var(--muted);
+    }
+    .md-body code {
+      background: var(--surface);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.85em;
+      color: var(--accent);
+    }
+    .md-body pre {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      overflow-x: auto;
+      margin: 0.75rem 0;
+    }
+    .md-body pre code {
+      background: none;
+      padding: 0;
+      color: var(--text);
+    }
+    .md-body table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+      margin: 0.75rem 0;
+    }
+    .md-body th {
+      background: var(--surface);
+      color: var(--muted);
+      text-align: left;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      font-weight: 600;
+    }
+    .md-body td {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+    }
+    .md-body tr:hover td { background: var(--surface); }
+    .md-body img { max-width: 100%; border-radius: 8px; margin: 0.5rem 0; }
+    .md-body hr { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+    .md-body strong { color: var(--text); }
+
+    /* Loading / Error */
+    .loading {
+      text-align: center;
+      padding: 3rem;
+      color: var(--muted);
+    }
+    .spinner {
+      display: inline-block;
+      width: 20px; height: 20px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 0.75rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .content { padding: 1.5rem 1rem; }
+    }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding-top: 1rem; margin-top: 2rem;
+      font-size: 0.8rem; color: var(--muted); text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="index.html" class="brand">Qdrant</a>
+    <a href="index.html">Home</a>
+    <a href="5_Symbols/search.html">Search</a>
+    <a href="5_Symbols/dashboard.html">Dashboard</a>
+    <a href="simulation.html">Simulation</a>
+    <a href="markdown_renderer.html" class="active">Docs</a>
+  </nav>
+
+  <div class="page">
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <h3>Project Root</h3>
+      <a href="#" onclick="load('README.md'); return false;">
+        <span class="folder-icon">📄</span>README.md
+      </a>
+      <a href="#" onclick="load('claude.md'); return false;">
+        <span class="folder-icon">📄</span>claude.md
+      </a>
+
+      <h3>1_Real_Unknown</h3>
+      <a href="#" onclick="load('1_Real_Unknown/okr.md'); return false;">
+        <span class="folder-icon">🎯</span>okr.md
+      </a>
+
+      <h3>2_Environment</h3>
+      <a href="#" onclick="load('2_Environment/env_proxmox.md'); return false;">
+        <span class="folder-icon">🖥️</span>env_proxmox.md
+      </a>
+      <a href="#" onclick="load('2_Environment/env_windows.md'); return false;">
+        <span class="folder-icon">🪟</span>env_windows.md
+      </a>
+      <a href="#" onclick="load('2_Environment/env_macos.md'); return false;">
+        <span class="folder-icon">🍎</span>env_macos.md
+      </a>
+      <a href="#" onclick="load('2_Environment/proxmox_simulation_install_logs.md'); return false;">
+        <span class="folder-icon">📋</span>proxmox_simulation_install_logs.md
+      </a>
+
+      <h3>4_Formula</h3>
+      <a href="#" onclick="load('4_Formula/populate_qdrant.md'); return false;">
+        <span class="folder-icon">📝</span>populate_qdrant.md
+      </a>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="content">
+      <div class="breadcrumb" id="breadcrumb">
+        <a href="index.html">Home</a> / <span>Docs</span>
+      </div>
+
+      <div class="md-body" id="md-content">
+        <div class="loading">
+          <p style="font-size: 1.5rem; margin-bottom: 1rem;">📚</p>
+          <p>Select a document from the sidebar to view it here.</p>
+          <p style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--muted);">
+            All project markdown files are rendered in the browser — no build step needed.
+          </p>
+        </div>
+      </div>
+
+      <footer>
+        Qdrant &mdash; Second Brain Semantic Search &bull; MIT License &bull;
+        <a href="https://qdrant.tech/documentation/" style="color:var(--accent)">Qdrant Docs</a>
+      </footer>
+    </main>
+
+  </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-ini.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-powershell.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-xml-doc.min.js"></script>
+
+<script>
+const contentEl   = document.getElementById('md-content');
+const breadcrumb  = document.getElementById('breadcrumb');
+const sidebar     = document.getElementById('sidebar');
+let currentFile   = null;
+
+// Configure marked
+marked.setOptions({
+  breaks: true,
+  gfm: true,
+  highlight: function(code, lang) {
+    if (Prism.languages[lang]) {
+      return Prism.highlight(code, Prism.languages[lang], lang);
+    }
+    return code;
+  }
+});
+
+async function load(path) {
+  // Highlight sidebar link
+  sidebar.querySelectorAll('a').forEach(a => a.classList.remove('active'));
+  const link = sidebar.querySelector(`a[onclick*="${path}"]`);
+  if (link) link.classList.add('active');
+
+  // Update breadcrumb
+  const parts = path.split('/');
+  const filename = parts.pop();
+  const folder = parts.join('/');
+  breadcrumb.innerHTML = `<a href="index.html">Home</a> / ` +
+    (folder ? `<span>${folder}</span> / ` : '') +
+    `<span style="color:var(--accent)">${filename}</span>`;
+
+  // Show loading
+  contentEl.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading&hellip;</p></div>';
+
+  try {
+    const resp = await fetch(path);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const md = await resp.text();
+
+    contentEl.innerHTML = marked.parse(md);
+    currentFile = path;
+
+    // Re-run Prism on any code blocks
+    contentEl.querySelectorAll('pre code').forEach(block => {
+      Prism.highlightElement(block);
+    });
+
+    // Update URL hash
+    history.replaceState(null, '', `#${path}`);
+
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch (err) {
+    contentEl.innerHTML = `<div class="loading">
+      <p style="font-size:1.5rem">⚠️</p>
+      <p>Failed to load <code>${path}</code></p>
+      <p style="font-size:0.85rem;color:var(--muted);margin-top:0.5rem">${err.message}</p>
+    </div>`;
+  }
+}
+
+// Load from URL hash on page load
+window.addEventListener('DOMContentLoaded', () => {
+  const hash = location.hash.slice(1);
+  if (hash) {
+    load(decodeURIComponent(hash));
+  }
+});
+</script>
+</body>
+</html>
