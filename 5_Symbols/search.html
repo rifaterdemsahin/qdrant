@@ -395,11 +395,20 @@
 
         // Build Obsidian URL
         const filename = r.payload?.filename ?? r.payload?.title ?? 'Untitled';
-        const filePath = r.payload?.path ?? filename;
-        // Use full path for Obsidian URL, remove .md extension if present and encode for URL
-        const fileForUrl = filePath.replace(/\.md$/, '');
-        // Format: obsidian://open?vault=secondbrain&file=secondbrain/path/to/file
-        const obsidianUrl = `obsidian://open?vault=secondbrain&file=${encodeURIComponent('secondbrain/' + fileForUrl)}`;
+        const fullPath = r.payload?.path ?? filename;
+
+        // Extract relative path from absolute path
+        // Path format: /Users/.../secondbrain/secondbrain/4_Archieve/...
+        // We need: secondbrain/4_Archieve/...
+        let relativePath = fullPath;
+        const vaultMatch = fullPath.match(/\/secondbrain\/secondbrain\/(.+)/);
+        if (vaultMatch) {
+          relativePath = 'secondbrain/' + vaultMatch[1];
+        }
+
+        // Remove .md extension if present
+        const fileForUrl = relativePath.replace(/\.md$/, '');
+        const obsidianUrl = `obsidian://open?vault=secondbrain&file=${encodeURIComponent(fileForUrl)}`;
 
         card.innerHTML = `
           <div class="title">
